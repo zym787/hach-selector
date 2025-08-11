@@ -211,6 +211,7 @@ void SignalScan(void)
             Valve.bNewInit = 1;
             Valve.bErr = NONE_ERR;
             syspara.protectTimeOut = 0;
+            Valve.bHalfDo = 0;
             sig.stpScan = 0;
             break;
         default:

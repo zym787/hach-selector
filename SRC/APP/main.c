@@ -405,7 +405,7 @@ int main(void)
 
 void DebugOut(void)
 {
-    if(timerPara.timeDbg>DMSEC/2)
+    if(timerPara.timeDbg>SEC)
     {
         timerPara.timeDbg = 0;
         LED_WORK = !LED_WORK;
