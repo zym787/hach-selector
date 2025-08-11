@@ -115,9 +115,10 @@ void Usart2_Init(u32 pclk2,u32 bound)
 	//使能接收中断
 	USART2->CR1 |= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
 	USART2->CR1 |= 1<<5;              //接收缓冲区非空中断使能
-	MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
     #endif
 }
+
 
 
 void Usart2_SendB(unsigned char ch)
@@ -139,7 +140,7 @@ void USART2_IRQHandler(void)
 {
 	char res;
 	res = res;
-	if(USART2->SR&(1<<5))//接收到数据
+	if(USART2->SR&(1<<5))            //接收到数据
 	{
 		res=USART2->DR;
         if(syspara.typeProtocal==MY_MODBUS)

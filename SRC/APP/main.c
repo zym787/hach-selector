@@ -77,11 +77,11 @@ void ParameterInit(void)
 		rdc.stepRound *= SCALE;
 		rdc.stepRound *= rdc.rate;
         prInfo(PR_INFO, "\r\n rate %d round %d", rdc.rate, rdc.stepRound);
-        
+
         I2CPageRead_Nbytes(ADDR_SPD, LEN_SPD, &Valve.spd);
         if(!Valve.spd || Valve.spd>SPD_LMT)
             Valve.spd = SPD_VALVE;
-        
+
         speed[AXSV] = accel[AXSV] = decel[AXSV] = 100;
         speed[AXSV] *= (Valve.spd);
         speed[AXSV] *= (rdc.rate);
@@ -89,7 +89,7 @@ void ParameterInit(void)
         accel[AXSV] *= (rdc.rate);
         decel[AXSV] *= (Valve.spd);
         decel[AXSV] *= (rdc.rate);
-        
+
         I2CPageRead_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
         I2CPageRead_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &syspara.typeProtocal);
 
@@ -107,19 +107,19 @@ void ParameterInit(void)
         uint32 temp=0;
         temp = sig.pulseBlock[0]*PERCENT_TOLL;
         sig.pulseBlock[2] = temp/PERCENT;
-        
+
         sig.pulseBlock[1] = ReadBuf[2];
         sig.pulseBlock[1] <<= 8;
         sig.pulseBlock[1] |= ReadBuf[3];
         temp = sig.pulseBlock[1]*PERCENT_TOLL;
         sig.pulseBlock[3] = temp/PERCENT;
-        
+
         sig.pulseGap[0] = ReadBuf[4];
         sig.pulseGap[0] <<= 8;
         sig.pulseGap[0] |= ReadBuf[5];
         temp = sig.pulseGap[0]*PERCENT_TOLL;
         sig.pulseGap[2] = temp/PERCENT;
-        
+
         sig.pulseGap[1] = ReadBuf[6];
         sig.pulseGap[1] <<= 8;
         sig.pulseGap[1] |= ReadBuf[7];
@@ -153,7 +153,7 @@ void ParameterInit(void)
         valveFix.fix.dirGap = valveFixDir;
         I2CPageWrite_Nbytes(ADDR_INTVL, LEN_INTVL, &IntDflt);
         intCtrl = IntDflt;
-        
+
         rdc.rate = 10;
         I2CPageWrite_Nbytes(ADDR_RDC_RATE, LEN_RDC_RATE, &rdc.rate);
 		rdc.stepP1dgr = STEPS_1_DEGREE_RD10;
@@ -171,7 +171,7 @@ void ParameterInit(void)
         accel[AXSV] *= (rdc.rate);
         decel[AXSV] *= (Valve.spd);
         decel[AXSV] *= (rdc.rate);
-        
+
         memset(Valve.SnCode, 0, sizeof(Valve.SnCode));
         I2CPageWrite_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
         I2CPageWrite_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &protocalDflt);
@@ -200,10 +200,10 @@ void ParameterInit(void)
     syspara.typeInfo = PR_INFO;
     syspara.comInfo = PR_INFO;
 }
- 
+
 
 /*
-    
+
 */
 void GPIOInit(void)
 {
@@ -238,7 +238,7 @@ void EXTI_Init(void)
 {
     // 外部中断脚输入输出定义
     GPIOA->CRH &= (GPIO_Crh_P15);
-	GPIOA->CRH |= (GPIO_Mode_IN_PU_PD_P15); 
+	GPIOA->CRH |= (GPIO_Mode_IN_PU_PD_P15);
     GPIOA->ODR |= (GPIO_Pin_15);
 	Ex_NVIC_Config(GPIO_A, 15, RTIR);             // PA15触发类型上升沿
 	Ex_NVIC_Config(GPIO_A, 15, FTIR);             // PA15触发类型下降沿
@@ -248,23 +248,27 @@ void EXTI_Init(void)
 
 void errProcRun(void)
 {
-    if(++Valve.retryTms<=RETRY_TIMES)
-    {
-        Valve.status = VALVE_INITING;
-        Valve.bNewInit = 1;
-        syspara.pwrOn = true;
-        syspara.reShift = true;
-        Valve.initStep = 0;
-        syspara.protectTimeOut = 0;
-        Valve.cntSignal = 0;
-//        Valve.status = VALVE_INITING;
-//        Valve.bNewInit = 1;
-//        syspara.pwrOn = true;
-//        Valve.initStep = 0;
-//        syspara.protectTimeOut = 0;
-//        Valve.stpCnt = 0;
-//        Valve.bErr = 0;
-        prInfo(syspara.typeInfo, "\r\n reShift %d", Valve.retryTms);
+    if(!(Valve.status&VALVE_INITING))
+    {// 复位时不做重新找位动作
+        if(++Valve.retryTms<=RETRY_TIMES)
+        {
+            Valve.status = VALVE_INITING;
+            Valve.bNewInit = 1;
+            syspara.pwrOn = true;
+            syspara.reShift = true;
+            Valve.initStep = 0;
+            syspara.protectTimeOut = 0;
+            Valve.cntSignal = 0;
+            prInfo(syspara.typeInfo, "\r\n reShift %d %d", Valve.portDes, Valve.retryTms);
+        }
+        else
+        {
+            Valve.portDes = 0;
+            Valve.ErrBlinkTime = RETRY_TIME_OUT;
+            Valve.status = VALVE_ERR;
+            VALVE_ENA = DISABLE;
+            prInfo(syspara.typeInfo, "\r\n reShift times out");
+        }
     }
     else
     {
@@ -272,7 +276,7 @@ void errProcRun(void)
         Valve.ErrBlinkTime = RETRY_TIME_OUT;
         Valve.status = VALVE_ERR;
         VALVE_ENA = DISABLE;
-        prInfo(syspara.typeInfo, "\r\n reShift times out");
+        prInfo(syspara.typeInfo, "\r\n initing err");
     }
 }
 
@@ -296,6 +300,7 @@ void every50MilliSecDoing(void)
             }
         }
 
+        // 复位完后走到半通道或者1号位
         if(!Valve.bHalfSeal)
         {
             if(Valve.status==VALVE_RUN_END && !MotionStatus[AXSV] && !Valve.bErr && Valve.bNewInit)
@@ -345,6 +350,8 @@ int main(void)
     TIM4_Init(65535,35);            //X轴脉冲定时器
     GPIOInit();
     EXTI_Init();
+    MYDMA_TX_Cfg(DMA1_Channel2, (unsigned int)&USART3->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
+    MYDMA_TX_Cfg(DMA1_Channel7, (unsigned int)&USART2->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
     delay_ms(100);
     BootInterface();
     ParameterInit();
@@ -389,9 +396,9 @@ void DebugOut(void)
             Valve.bGetOrg = 0;
             prInfo(syspara.typeInfo, "\r\n get/pass org %d", position[AXSV]);
         }
-        prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d [%d %d]", 
-        Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT, MotionStatus[AXSV], position[AXSV]);
-//        prDbg(syspara.typeInfo, "\r\n >> %d %d %d %d", syspara.shiftOnece, Valve.bNewInit, syspara.reShift, Valve.bErr);
+        prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d", 
+        Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT);
+
     }
 }
 

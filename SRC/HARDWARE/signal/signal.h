@@ -7,15 +7,15 @@
 #define PEXT extern
 #endif
 
-#define PERCENT_TOLL    10
+#define PERCENT_TOLL    20
 #define PERCENT         100
 
 #define SIGNAL_CNT          24
 
 typedef struct
 {
-    unsigned short pulseGap[32];            // high pulse
-    unsigned short pulseBlock[32];          // low pulse
+    unsigned short pulseGap[32];                    // high pulse
+    unsigned short pulseBlock[32];                  // low pulse
     unsigned short basicPulse;                      // 最后一个信号到通道完成的脉冲个数
     unsigned short pulse[SIGNAL_CNT];               // 最后一个信号到通道完成的脉冲个数
     bool            bRdPulse;

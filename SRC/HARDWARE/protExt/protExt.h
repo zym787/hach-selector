@@ -51,6 +51,9 @@ typedef struct
     uint8   rxTimeOn;
     uint8   rxTimeCnt;
     uint8   f_RxErr;
+    uint8   sendCnt;
+    uint8   send232Cnt;
+    uint8   send485Cnt;    
     uint8   usartBuf[128];
     uint8   replyBuf[128];
     uint8   reply485Buf[128];

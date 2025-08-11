@@ -113,7 +113,11 @@ void getPrePort(void)
     }
 }
 
-
+/*
+    按孔位距离计算需要走多少步数
+    由于是按信号数定位，需要多走，此处多走半个通道
+    当信号数计数到了之后，在中断处按补偿值进行减速动作，保证每次到达的目标位置都在信号点附近
+*/
 int getCoord(sint32 destiny)
 {
     sint32 dCoord=0;
@@ -125,6 +129,10 @@ int getCoord(sint32 destiny)
 }
 
 
+
+/*
+    按补偿值计算减速步数
+*/
 void DeccelStep(uint8 dir)
 {
     if(dir==CW)
@@ -135,6 +143,7 @@ void DeccelStep(uint8 dir)
     {
         srd[AXSV].accel_count = -Valve.fixOrg*rdc.stepP01dgr;
     }
+    // 进入减速段
     srd[AXSV].run_state = DECEL;
 }
 
@@ -164,13 +173,15 @@ void ProcessValve(void)
                                 Valve.portCur = 0;
                             }
 
+                            // 计算前后两个方向当前位置与目标位置距离多少个孔位
+                            // 就近原则下取小值的那个方向
                             if(Valve.portDes>Valve.portCur)
-                            {
+                            {// 目标位置在当前位置后面
                                 Positive = Valve.portDes-Valve.portCur;
                                 Negative = Valve.portCur-Valve.portDes+valveFix.fix.portCnt;
                             }
                             else
-                            {
+                            {// 目标位置在当前位置前面
                                 Positive = Valve.portDes-Valve.portCur+valveFix.fix.portCnt;
                                 Negative = Valve.portCur-Valve.portDes;
                             }
@@ -195,7 +206,9 @@ void ProcessValve(void)
                                     sub = Valve.portCur+Positive;
                                     prDbg(syspara.typeInfo, "3 <%d>", sub);
                                 }
+                                // 按孔位距离计算需要产生的信号个数
                                 Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
+                                // 常规转向的时候，当前是半通道位置的时候需要扣除2个信号值
                                 if(Valve.bHalfSeal && !Valve.portCur)
                                 {
                                     Valve.limitSignal -= SIGNAL_SUM/valveFix.fix.portCnt/2;
@@ -226,7 +239,9 @@ void ProcessValve(void)
                                     sub = Valve.portDes-valveFix.fix.portCnt;
                                     prDbg(syspara.typeInfo, "3 <%d>", sub);
                                 }
+                                // 按孔位距离计算需要产生的信号个数
                                 Valve.limitSignal = Negative*SIGNAL_SUM/valveFix.fix.portCnt;
+                                // 反转的时候，当前是半通道位置的时候需要加2个信号值
                                 if(Valve.bHalfSeal && !Valve.portCur)
                                 {
                                     Valve.limitSignal += SIGNAL_SUM/valveFix.fix.portCnt/2;
@@ -237,7 +252,6 @@ void ProcessValve(void)
                         }
                         else
                         {// 指定方向寻位
-                            // 找出最近方向
                             if(Valve.portCur==0xff)
                             {
                                 Valve.portCur = 0;
@@ -273,7 +287,9 @@ void ProcessValve(void)
                                     }
                                     Positive = Valve.portDes-Valve.portCur+valveFix.fix.portCnt;
                                 }
+                                // 按孔位距离计算需要产生的信号个数
                                 Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
+                                // 常规转向的时候，当前是半通道位置的时候需要扣除2个信号值
                                 if(Valve.bHalfSeal && !Valve.portCur)
                                 {
                                     Valve.limitSignal -= SIGNAL_SUM/valveFix.fix.portCnt/2;
@@ -306,7 +322,9 @@ void ProcessValve(void)
                                     prDbg(syspara.typeInfo, "2 <%d>", sub);
                                     Positive = Valve.portCur+valveFix.fix.portCnt-Valve.portDes;
                                 }
+                                // 按孔位距离计算需要产生的信号个数
                                 Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
+                                // 反转的时候，当前是半通道位置的时候需要加2个信号值
                                 if(Valve.bHalfSeal && !Valve.portCur)
                                 {
                                     Valve.limitSignal += SIGNAL_SUM/valveFix.fix.portCnt/2;
@@ -323,6 +341,7 @@ void ProcessValve(void)
         				Valve.status |= VALVE_RUNNING; 	    // 置位运行标志
                         Valve.statusLast = VALVE_RUNNING;
                         syspara.protectTimeOut = 0;
+                        syspara.bSkipFirstSig = false;
                     }
                     else if(Valve.portCur==Valve.portDes)
                     {
@@ -404,7 +423,7 @@ void ProcessInterrupt(void)
     }
     if(sig.bRdPulse==false)
     {
-        if(syspara.shiftOnece==true && syspara.dbgStop==false && !Valve.bNewInit)
+        if(syspara.dbgStop==false && !Valve.bNewInit)
         {
             if(Valve.cntSignal>=Valve.limitSignal)
             {// 修正坐标
@@ -415,7 +434,7 @@ void ProcessInterrupt(void)
                         position[AXSV] = getCoord(Valve.portDes)+Valve.fixOrg*rdc.stepP01dgr;
                     else
                         position[AXSV] = getCoord(Valve.portDes-valveFix.fix.portCnt)+Valve.fixOrg*rdc.stepP01dgr;
-                        
+
                     srd[AXSV].run_state = DECEL;
                     syspara.dbgStop = true;
                 }
@@ -426,14 +445,14 @@ void ProcessInterrupt(void)
                         position[AXSV] = getCoord(Valve.portDes)-Valve.fixOrg*rdc.stepP01dgr;
                     else
                         position[AXSV] = getCoord(Valve.portDes-valveFix.fix.portCnt)-Valve.fixOrg*rdc.stepP01dgr;
-                        
+
                     srd[AXSV].run_state = DECEL;
                     syspara.dbgStop = true;
                 }
             }
         }
-    }   
-    
+    }
+
     if(syspara.bInterrupt==true)
     {
         syspara.bInterrupt = false;
@@ -467,17 +486,32 @@ void ProcessInterrupt(void)
                                 //prInfo(syspara.typeInfo, "\r litB");
                             }
                         }
+                        #ifdef SIG_DET
+                        else if(!(Valve.status&VALVE_INITING) && syspara.bSkipFirstSig==true)
+                        {
+                            if(Valve.OptBlock<(sig.pulseBlock[1]-sig.pulseBlock[3]) || Valve.OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])
+                            || (Valve.OptBlock>(sig.pulseBlock[1]+sig.pulseBlock[3]) && Valve.OptBlock<=(sig.pulseBlock[0]-sig.pulseBlock[2])))
+                            {// 信号出错
+                                prInfo(syspara.typeInfo, "\r\n err block %d", Valve.OptBlock);
+                                VALVE_ENA = DISABLE;
+                                Valve.bErr = 1;
+                                errProcRun();
+                            }
+                        }
+                        #endif
                     }
                 }
                 else
                     syspara.pwrOn = false;
+                if(syspara.bSkipFirstSig==false)
+                    syspara.bSkipFirstSig = true;
                 Valve.nowBlockCnt = Valve.OptBlock;
                 Valve.OptBlock = 0;
             }
         }
         else
         {// 挡片
-            ++Valve.OptBlock;            
+            ++Valve.OptBlock;
             if(Valve.OptGap)
             {// 此处处理缺口
                 if(syspara.pwrOn==false)
@@ -501,6 +535,19 @@ void ProcessInterrupt(void)
                                 //prInfo(syspara.typeInfo, "\r lrg");
                             }
                         }
+                        #ifdef SIG_DET
+                        else if(!(Valve.status&VALVE_INITING) && syspara.bSkipFirstSig==true)
+                        {
+                            if(Valve.OptGap<(sig.pulseGap[0]-sig.pulseGap[2]) || Valve.OptGap>(sig.pulseGap[1]+sig.pulseGap[3])
+                                || (Valve.OptGap>(sig.pulseGap[0]+sig.pulseGap[2]) && Valve.OptGap<=(sig.pulseGap[1]-sig.pulseGap[3])))
+                            {// 信号出错
+                                prInfo(syspara.typeInfo, "\r\n err gap %d", Valve.OptGap);
+                                VALVE_ENA = DISABLE;
+                                Valve.bErr = 1;
+                                errProcRun();
+                            }
+                        }
+                        #endif
                     }
                 }
                 else
@@ -565,7 +612,7 @@ void ProcessInterrupt(void)
                                 Valve.portCur = valveFix.fix.portCnt;
                                 syspara.shiftOnece = false;
                             }
-                            else 
+                            else
                             {
                                 if(Valve.cntSignal==Valve.limitSignal)
                                 {
@@ -589,7 +636,7 @@ void ProcessInterrupt(void)
                                 }
                             }
                         }
-                        
+
                         Valve.passByOne = 0;
                         Valve.status &= ~VALVE_RUNNING;
                         if(!(Valve.status&VALVE_ERR))

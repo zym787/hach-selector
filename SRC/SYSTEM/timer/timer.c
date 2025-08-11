@@ -77,7 +77,7 @@ void TIM4_Init(uint16 arr,uint16 psc)
 	TIM4->PSC=psc;  	//预分频器7200,得到10Khz的计数时钟
 	TIM4->DIER|=1<<0;   //允许更新中断
 	TIM4->CR1|=0x01;    //使能定时器4
-	MY_NVIC_Init(2,3,TIM4_IRQn,2);//抢占1，子优先级3，组2
+	MY_NVIC_Init(0,3,TIM4_IRQn,2);//抢占1，子优先级3，组2
 }
 
 //定时器4中断服务程序

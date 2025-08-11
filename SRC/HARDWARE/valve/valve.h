@@ -83,28 +83,28 @@ typedef struct
     
     unsigned char statusLast;       //
     unsigned char passByOne;        //重新校准1号位标志
-    unsigned char bErrRetn;       //
-    unsigned char threshSignal;       // 信号阈值个数
+    unsigned char bErrRetn;         //
+    unsigned char threshSignal;     // 信号阈值个数
     
     unsigned char bErr;             // 出错标志
     unsigned char bHalfSeal;             // 出错标志
-    short         cntSignal;       // 信号个数
+    short         cntSignal;        // 信号个数
 
     unsigned char bNewInit;         // 刚复位完成
     unsigned short ErrBlinkTime;    //错误灯提示间隔
     unsigned char fixOrg;          	// 原点补偿
-    unsigned char spd;          // 再次复位转动
+    unsigned char spd;              // 再次复位转动
 
-    unsigned int OptGap;           //光耦高电平脉冲步数
-    unsigned int OptBlock;            //光耦低电平脉冲步数
-    unsigned int nowGapCnt;            //光耦低电平脉冲步数
-    unsigned int nowBlockCnt;            //光耦低电平脉冲步数
+    unsigned int OptGap;            //光耦高电平脉冲步数
+    unsigned int OptBlock;          //光耦低电平脉冲步数
+    unsigned int nowGapCnt;         //光耦低电平脉冲步数
+    unsigned int nowBlockCnt;       //光耦低电平脉冲步数
     unsigned int stpCnt;            //初始化后开始补偿的步数
 
     unsigned int BaudRate;          //运行的波特率值
     unsigned char SnCode[LEN_SN];   // 序列码
-    unsigned char serialNum;        // 连续目标孔位，不知道哪个傻逼想的，确定一个孔位要连续分多次走位
-    unsigned char serialPort[PREPORTCNT];    // 连续目标孔位，不知道哪个傻逼想的，确定一个孔位要连续分多次走位
+    unsigned char serialNum;
+    unsigned char serialPort[PREPORTCNT];
     unsigned char bGetOrg;
 }_VALVE_T;
 PEXT _VALVE_T Valve;

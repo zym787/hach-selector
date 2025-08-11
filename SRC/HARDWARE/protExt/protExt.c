@@ -37,6 +37,12 @@ void RxDataProcessEnd(void)
     protext.rxCount = 0;
     protext.rxTimeOn = 0;
     protext.rxTimeCnt = 0;
+//    #ifdef EN_UART3_TX
+//    Usart2InterruptEnable();
+//    Usart3InterruptEnable();
+//    protext.send232Cnt = 0;
+//    protext.send485Cnt = 0;
+//    #endif
 }
 
 /*
@@ -115,44 +121,6 @@ void RxUsart(uint8 res)
 	}
 }
 
-/*
-    类modbus处理
-*/
-//void RxUsart(unsigned char res)
-//{
-//	protext.time = 0;  //重新计时
-//	if(protext.stepCnt==PROTOCOL_HEAD && !protext.rxCount)
-//	{// 空闲并且数据处理结束，可以进行新的接收
-//	    protext.stepCnt = PROTOCOL_ADDR;
-//		protext.rxCount = 1;
-//		protext.usartBuf[0] = res;
-//	}
-//	else if(protext.stepCnt==PROTOCOL_ADDR)
-//	{
-//        if(ModbusPara.mAddrs==res)
-//    	{// 开始接收数据
-//    	    protext.stepCnt = PROTOCOL_COMMAND;
-//    		protext.rxCount = 2;
-//    		protext.usartBuf[1] = res;
-//    	}
-//    	else
-//    	{// 非本设备地址，或非当前查询的设备，且非广播地址
-//		    ERR_Reset();
-//    	}
-//	}
-//	else if(protext.stepCnt>PROTOCOL_COMMAND)
-//	{
-//		// 如果溢出或者传输过程出现时间间隔超过T1.5，都不在接收
-//		if(ModbusPara.times<FRAME_ERR_TIME)
-//			protext.usartBuf[protext.rxCount] = res;
-//		else
-//		    ERR_Reset();
-
-//    	++protext.rxCount;
-//	}
-//}
-
-
 
 /*
 
@@ -177,42 +145,36 @@ uint8 CommCheckSum(uint32 lenth, uint8 *sendbuf)
 }
 
 
-/*
-*/
-void CommSend(uint32 length, uint8 *sendbuf)
-{
-	unsigned char cnt;
+//    /*
+//    */
+//    void CommSend(uint32 length, uint8 *sendbuf)
+//    {
+//    	unsigned char cnt;
 
-	TX_EN();
-	if(length)
-	{
-		for(cnt=0; cnt < length; cnt++)
-		{
-			while((USART3->SR&0X40)==0);        //等待发送结束
-			USART3->DR = *(sendbuf+cnt);
-		}
-	}
-	while((USART3->SR&0X40)==0);                //等待发送结束
-	RX_EN();
+//    	TX_EN();
+//    	if(length)
+//    	{
+//    		for(cnt=0; cnt < length; cnt++)
+//    		{
+//    			while((USART3->SR&0X40)==0);        // 等待发送结束
+//    			USART3->DR = *(sendbuf+cnt);
+//    		}
+//    	}
+//    	while((USART3->SR&0X40)==0);                // 等待发送结束
+//    	RX_EN();
 
-	if(length)
-	{
-		for(cnt=0; cnt < length; cnt++)
-		{
-			while((USART2->SR&0X40)==0);        //等待发送结束
-			USART2->DR = *(sendbuf+cnt);
-		}
-	}
-	while((USART2->SR&0X40)==0);                //等待发送结束
-}
+//    	if(length)
+//    	{
+//    		for(cnt=0; cnt < length; cnt++)
+//    		{
+//    			while((USART2->SR&0X40)==0);        // 等待发送结束
+//    			USART2->DR = *(sendbuf+cnt);
+//    		}
+//    	}
+//    	while((USART2->SR&0X40)==0);                // 等待发送结束
+//    }
 
-/*
-*/
-//void CommSend485(uint32 length, uint8 *sendbuf)
-//{
-//	uint16 cnt;
-//    uint8 temp;
-//}
+
 
 /*
 */
@@ -284,10 +246,20 @@ void AskStaProcess(uint32 sta8)
             protext.replyBuf[2] = 0x00;
             protext.replyBuf[3] = 0x00;
             protext.replyBuf[4] = 0x00;
-            if(Valve.status==VALVE_RUN_END)
-                protext.replyBuf[5] = 0x00;
+            if(Valve.bErr)
+            {
+//                if(Valve.status==VALVE_RUN_END)
+//                    protext.replyBuf[5] = 0x00;
+//                else
+                    protext.replyBuf[5] = 0x08;
+            }
             else
-                protext.replyBuf[5] = Valve.status;
+            {
+                if(Valve.status==VALVE_RUN_END)
+                    protext.replyBuf[5] = 0x00;
+                else
+                    protext.replyBuf[5] = Valve.status;
+            }
             break;
         default:
             protext.replyBuf[2] = 0x00;
@@ -297,27 +269,20 @@ void AskStaProcess(uint32 sta8)
             break;
 	}
 	sdLen = REPLY_LENS;
+    protext.sendCnt =  REPLY_LENS;
     checkSum = CommCheckSum(sdLen-1, protext.replyBuf);	// 获取CRC
     protext.replyBuf[sdLen-1] = checkSum;
 
-    CommSend(sdLen, protext.replyBuf);
-    
     prInfo(syspara.comInfo, "\r\n s:");
     for(uint8 i=0; i<sdLen; i++)
     {
         prInfo(syspara.comInfo, " %02x", protext.replyBuf[i]);
-//        #ifdef INFO_DEBUG
-//        if((Valve.status==VALVE_ERR && errRecord.bPrint==false)||Valve.bErrRetn)
-//        {
-//            errRecord.rplyLast[i] = protext.replyBuf[i];
-//            if(i==REPLY_LENS-1)
-//            {
-//                errRecord.bPrint = true;
-//                Valve.bErrRetn = 0;
-//            }
-//        }
-//        #endif
     }
+//    CommSend(sdLen, protext.replyBuf);
+    TX_EN();
+    MYDMA_Enable(USART3, DMA1_Channel2, REPLY_LENS);
+    MYDMA_Enable(USART2, DMA1_Channel7, REPLY_LENS);
+    
 }
 
 
@@ -385,7 +350,6 @@ void CWAction(void)
 }
 
 
-
 /*
 
 */
@@ -416,6 +380,7 @@ void CCWAction(void)
     	    Valve.bErrRetn = 0x01;
     }
 }
+
 
 /*
 
@@ -483,9 +448,9 @@ void ProtocalSet(void)
  void UsartProcess(void)
 {
     unsigned char i=0;
-	if(protext.stepCnt == PROTOCOL_OK)
+	if(protext.stepCnt==PROTOCOL_OK)
 	{//usart4通讯处理
-		if(protext.rxCount != 0)
+		if(protext.rxCount!=0)
 		{
     	    prInfo(syspara.comInfo, "\r\n r:");
             for(i=0; i<protext.rxCount; i++)

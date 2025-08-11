@@ -721,6 +721,7 @@ void TermRST(char rw)
     Valve.bErr = 0;
     Valve.bNewInit = 1;
     syspara.protectTimeOut = 0;
+    VALVE_ENA = ENABLE;
 }
 
 

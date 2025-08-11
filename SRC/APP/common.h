@@ -19,12 +19,13 @@ typedef enum
 }bool;
 
 
+#define SIG_DET
 #define INFO_DEBUG
 #define A12_909_A2
 //#define A12_906_B1
 
 #include <stm32f10x.h>
-#include <stm32f10x_nvic.h>	 
+#include <stm32f10x_nvic.h>
 #include "sys.h"
 #include "signal.h"
 #include "usFunc.h"
@@ -34,6 +35,7 @@ typedef enum
 #include "timer.h"
 #include "smotor.h"
 #include "EEP24serial.h"
+#include "dma.h"
 #include "protext.h"
 #include "modbus.h"
 #include "main.h"
@@ -377,7 +379,8 @@ typedef enum
 
 //---------------------------------------------------------------------------
 #define TIM_ENABLE						        ((vu16)0x0001)		//使能计数器
-#define TIM_DISABLE						        ((vu16)0xFFFE)		//禁止计数器
+#define TIM_DISABLE						        ((vu16)0xFFFE)		//禁止计数
+
 
 #endif
 

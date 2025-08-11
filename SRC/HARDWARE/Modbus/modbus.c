@@ -380,6 +380,7 @@ void MB_PresetSingleHoldingRegister(void)
             syspara.pwrOn = true;
             Valve.bErr = 0;
             syspara.protectTimeOut = 0;
+            VALVE_ENA = ENABLE;
             I2CPageRead_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
             (valveFix.fix.portCnt&&valveFix.fix.portCnt>32)?(valveFix.fix.portCnt=10):(valveFix.fix.portCnt);
             I2CPageRead_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);

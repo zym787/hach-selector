@@ -8,7 +8,9 @@
 #endif
 
 
-#define SEC (1000)
+#define DMSEC   (100)
+#define HSEC    (500)
+#define SEC     (1000)
 typedef struct
 {
     uint16 timeDbg;

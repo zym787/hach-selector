@@ -7,8 +7,9 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                105
-#define SOFT_VS                 "V1.0.5r3"
+#define SOFT_VER                106
+#define SOFT_VS                 "V1.0.6r6"
+//#define SOFT_VS                 "V2.0.3r3"
 
 //------------------------------------------------------------------------------------------------------------
 #define ADDR_BOARD_ID           0
@@ -93,6 +94,8 @@ typedef struct
     bool    bInterrupt;
     uint32  protectTimeOut;
     bool    bEXTI;
+    bool    bSkipFirstSig;      // 跳过首个信号值
+    uint8    byteSend;
 }_SYS_T;
 PEXT _SYS_T syspara;
 
