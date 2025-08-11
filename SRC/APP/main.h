@@ -7,8 +7,8 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                102
-#define SOFT_VS                 "V1.0.2r8"
+#define SOFT_VER                103
+#define SOFT_VS                 "V1.0.3r8"
 
 //------------------------------------------------------------------------------------------------------------
 #define ADDR_BOARD_ID           0

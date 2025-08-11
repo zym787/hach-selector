@@ -30,7 +30,7 @@ typedef struct
 PEXT SIGNAL_T sig;
 
 
-
+PEXT void getOptStartStatus(void);
 PEXT bool GettCliffSignal(void);
 PEXT void SignalScan(void);
 PEXT uint8 SigSum(uint8 *array, uint8 len);

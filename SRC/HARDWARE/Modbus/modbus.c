@@ -371,12 +371,14 @@ void MB_PresetSingleHoldingRegister(void)
         }
         else if(func_num==6)
         {// ¸´Î»Ö¸Áî
+            Valve.retryTms = 0;
             Valve.status = VALVE_INITING;
             Valve.initStep = 0;
             Valve.portDes = 0;
             Valve.stpCnt = 0;
-            Valve.bReInit = 1;
+            Valve.bNewInit = 1;
             syspara.pwrOn = true;
+            Valve.bErr = 0;
             syspara.protectTimeOut = 0;
             I2CPageRead_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
             (valveFix.fix.portCnt&&valveFix.fix.portCnt>32)?(valveFix.fix.portCnt=10):(valveFix.fix.portCnt);

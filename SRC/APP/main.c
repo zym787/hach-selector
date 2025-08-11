@@ -174,12 +174,12 @@ void ParameterInit(void)
         else
             printd("\r\n disable pulse read");
     }
+    getOptStartStatus();
     VALVE_ENA = ON;
     Valve.status = VALVE_INITING;
     Valve.ErrBlinkTime = NORMAL_BLINK;
     Valve.passByOne = 0;
     Valve.bNewInit = 1;
-    Valve.bReInit = 1;
     Valve.retryTms = 0;
     syspara.protectTimeOut = 0;
     syspara.pwrOn = true;
@@ -200,11 +200,10 @@ void GPIOInit(void)
 
 void errProcRun(void)
 {
-    if(Valve.retryTms<=RETRY_TIMES)
+    if(++Valve.retryTms<=RETRY_TIMES)
     {
         Valve.status = VALVE_INITING;
         Valve.bNewInit = 1;
-        Valve.bReInit = 1;
         syspara.pwrOn = true;
         syspara.reShift = true;
         Valve.initStep = 0;
@@ -242,11 +241,30 @@ void everySecondDo(void)
 
         if(!Valve.bHalfSeal)
         {
-            if(Valve.status==VALVE_RUN_END && !MotionStatus[AXSV] && Valve.bNewInit)
+            if(Valve.status==VALVE_RUN_END && !MotionStatus[AXSV] && !Valve.bErr && Valve.bNewInit)
             {
                 Valve.portDes = 1;
                 Valve.dir = 0xff;
                 syspara.shiftOnece = true;
+            }
+        }
+        else
+        {
+            if(Valve.status==VALVE_RUN_END && !MotionStatus[AXSV] && !Valve.bErr && Valve.bNewInit)
+            {
+                if(Valve.portCur!=0xff)
+                {
+                    float tpFloat=0;
+                    tpFloat = (float)rdc.stepRound/valveFix.fix.portCnt;
+                    tpFloat /= 2;
+                    if(!MotionStatus[AXSV])
+                    {
+                        AxisMoveAbs(AXSV, -(int)tpFloat, accel[AXSV], decel[AXSV], speed[AXSV]);
+                        Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
+                    }
+                    Valve.portCur = 0xff;
+                    printd("\r\n go half");
+                }
             }
         }
     }
@@ -309,8 +327,8 @@ void DebugOut(void)
             Valve.bGetOrg = 0;
             printd("\r\n get/pass org %d", position[AXSV]);
         }
-        printd("\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d %d %d", 
-        Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT, MotionStatus[AXSV], position[AXSV]);
+//        printd("\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d %d %d %d", 
+//        Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT, MotionStatus[AXSV], position[AXSV], Valve.limitSignal);
     }
 }
 

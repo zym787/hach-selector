@@ -317,41 +317,50 @@ void TermPos(char rw)
 /*
 
 */
-void TermFix(char rw)
+void TermFixO(char rw)
 {
     int getInt[2] = {0, 0};
     if(rw == READ_ACT)
     {
-//        I2CPageRead_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &valveFix.array[valveFix.fix.portCnt-1]);
-//        printd("\r Fix:%d", valveFix.array[valveFix.fix.portCnt-1]);
         I2CPageRead_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
-        printd("\r\n Fix:%d", Valve.fixOrg);
-        I2CPageRead_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
-        printd("\r\n Dir:%d", valveFix.fix.dirGap);
+        printd("\r\n FixO:%d", Valve.fixOrg);
     }
     else
     {
-        unsigned char ret = FetchInt(3, 0, str.rcvStr, getInt);
+        unsigned char ret = FetchInt(4, 0, str.rcvStr, getInt);
         if(ret)
         {
             printd("\r\n Err code %d", ret);
             return;
         }
-        switch(getInt[0])
+        Valve.fixOrg = getInt[0];
+        I2CPageWrite_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
+        printd("\r\n set FixO:%d", Valve.fixOrg);
+    }
+}
+
+/*
+
+*/
+void TermFixD(char rw)
+{
+    int getInt[2] = {0, 0};
+    if(rw == READ_ACT)
+    {
+        I2CPageRead_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
+        printd("\r\n Dir:%d", valveFix.fix.dirGap);
+    }
+    else
+    {
+        unsigned char ret = FetchInt(4, 0, str.rcvStr, getInt);
+        if(ret)
         {
-            case 0:
-//                valveFix.array[valveFix.fix.portCnt-1] = getInt[1];
-//                I2CPageWrite_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &valveFix.array[valveFix.fix.portCnt-1]);
-                Valve.fixOrg = getInt[1];
-                I2CPageWrite_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
-                break;
-            case 1:
-                valveFix.fix.dirGap = getInt[1];
-                I2CPageWrite_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
-                break;
-            default:
-                break;
+            printd("\r\n Err code %d", ret);
+            return;
         }
+        valveFix.fix.dirGap = getInt[0];
+        I2CPageWrite_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
+        printd("\r\n set Dir:%d", valveFix.fix.dirGap);
     }
 }
 
@@ -681,6 +690,22 @@ void TermMotor(char rw)
     }
 }
 
+/*
+
+*/
+void TermRST(char rw)
+{
+    Valve.retryTms = 0;
+    syspara.pwrOn = true;
+    Valve.status = VALVE_INITING;
+    Valve.initStep = 0;
+    Valve.portDes = 0;
+    Valve.stpCnt = 0;
+    Valve.bErr = 0;
+    Valve.bNewInit = 1;
+    syspara.protectTimeOut = 0;
+}
+
 
 _TAB_T TermTab[]=
 {
@@ -693,19 +718,21 @@ _TAB_T TermTab[]=
     {6,     (*TermCat)},
     {7,     (*TermFetch)},
     {8,     (*TermPos)},
-    {9,     (*TermFix)},
-    {10,    (*TermAddr)},
-    {11,    (*TermInt)},
-    {12,    (*TermSpd)},
-    {13,    (*TermSN)},
-    {14,    (*TermProtocal)},
-    {15,    (*TermBaud)},
-    {16,    (*TermPulse)},
-    {17,    (*TermScan)},
-    {18,    (*TermRDCR)},
-    {19,    (*TermCnt)},
-    {20,    (*TermMotor)},
-    {21,    (*TermHalf)},
+    {9,     (*TermFixO)},
+    {10,    (*TermFixD)},
+    {11,    (*TermAddr)},
+    {12,    (*TermInt)},
+    {13,    (*TermSpd)},
+    {14,    (*TermSN)},
+    {15,    (*TermProtocal)},
+    {16,    (*TermBaud)},
+    {17,    (*TermPulse)},
+    {18,    (*TermScan)},
+    {19,    (*TermRDCR)},
+    {20,    (*TermCnt)},
+    {21,    (*TermMotor)},
+    {22,    (*TermHalf)},
+    {23,    (*TermRST)},
 };
 
 
@@ -753,71 +780,82 @@ void ChRUN(char *cmdName)
         (!strcasecmp(cmdName, CMD_POS))?(bRw = READ_ACT):(bRw = WRITE_ACT);
         FuncIndex = 8;
     }
-    else if(!strcasecmp(cmdName, CMD_FIX) || !strncasecmp(cmdName, CMD_FIX, 3))
+    else if(!strcasecmp(cmdName, "FIXO") || !strncasecmp(cmdName, "FIXO", 4))
     {
-        (!strcasecmp(cmdName, CMD_FIX))?(bRw = READ_ACT):(bRw = WRITE_ACT);
+        (!strcasecmp(cmdName, "FIXO"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
         FuncIndex = 9;
+    }
+    else if(!strcasecmp(cmdName, "FIXD") || !strncasecmp(cmdName, "FIXD", 4))
+    {
+        (!strcasecmp(cmdName, "FIXD"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
+        FuncIndex = 10;
     }
     else if(!strcasecmp(cmdName, CMD_ADDR) || !strncasecmp(cmdName, CMD_ADDR, 4))
     {
         (!strcasecmp(cmdName, CMD_ADDR))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 10;
+        FuncIndex = 11;
     }
     else if(!strcasecmp(cmdName, "INT") || !strncasecmp(cmdName, "INT", 3))
     {
         (!strcasecmp(cmdName, "INT"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 11;
+        FuncIndex = 12;
     }
     else if(!strcasecmp(cmdName, "SPD") || !strncasecmp(cmdName, "SPD", 3))
     {
         (!strcasecmp(cmdName, "SPD"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 12;
+        FuncIndex = 13;
     }
     else if(!strcasecmp(cmdName, "SN") || !strncasecmp(cmdName, "SN", 2))
     {
         (!strcasecmp(cmdName, "SN"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 13;
+        FuncIndex = 14;
     }
     else if(!strcasecmp(cmdName, "PRTCL") || !strncasecmp(cmdName, "PRTCL", 5))
     {
         (!strcasecmp(cmdName, "PRTCL"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 14;
+        FuncIndex = 15;
     }
     else if(!strcasecmp(cmdName, "BDR") || !strncasecmp(cmdName, "BDR", 3))
     {
         (!strcasecmp(cmdName, "BDR"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 15;
+        FuncIndex = 16;
     }
     else if(!strcasecmp(cmdName, "RDP") || !strncasecmp(cmdName, "RDP", 3))
     {
         (!strcasecmp(cmdName, "RDP"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 16;
+        FuncIndex = 17;
     }
     else if(!strcasecmp(cmdName, "SCAN") || !strncasecmp(cmdName, "SCAN", 4))
     {
         (!strcasecmp(cmdName, "SCAN"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 17;
+        FuncIndex = 18;
     }
     else if(!strcasecmp(cmdName, "RDCR") || !strncasecmp(cmdName, "RDCR", 4))
     {
         (!strcasecmp(cmdName, "RDCR"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 18;
+        FuncIndex = 19;
     }
     else if(!strcasecmp(cmdName, "CNT") || !strncasecmp(cmdName, "CNT", 3))
     {
         (!strcasecmp(cmdName, "CNT"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 19;
+        FuncIndex = 20;
     }
     else if(!strcasecmp(cmdName, "MOTOR") || !strncasecmp(cmdName, "MOTOR", 5))
     {
         (!strcasecmp(cmdName, "MOTOR"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 20;
+        FuncIndex = 21;
     }
     else if(!strcasecmp(cmdName, "HALF") || !strncasecmp(cmdName, "HALF", 4))
     {
         (!strcasecmp(cmdName, "HALF"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
-        FuncIndex = 21;
+        FuncIndex = 22;
     }
+    else if(!strcasecmp(cmdName, "RESET") || !strncasecmp(cmdName, "RESET", 5))
+    {
+        (!strcasecmp(cmdName, "RESET"))?(bRw = READ_ACT):(bRw = WRITE_ACT);
+        FuncIndex = 23;
+    }
+
     else
     {
         FuncIndex = 0;

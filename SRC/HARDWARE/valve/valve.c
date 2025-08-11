@@ -62,9 +62,7 @@ void InitValve(void)
 {
     if(Valve.status&VALVE_INITING && !MotionStatus[AXSV])
     {
-        if(Valve.bReInit)
         {
-            Valve.bReInit = 0;
             if(Valve.retryTms<RETRY_TIMES)
             {
                 printd("\r\n start round");
@@ -76,7 +74,7 @@ void InitValve(void)
             else
             {
                 Valve.ErrBlinkTime = RETRY_TIME_OUT;
-                Valve.status = 0;
+                Valve.status = VALVE_ERR;
                 VALVE_ENA = DISABLE;
                 printd("\r\n Inited retry time out");
             }
@@ -230,6 +228,11 @@ void ProcessValve(void)
                         }
                         else
                         {// 指定方向寻位
+                            // 找出最近方向
+                            if(Valve.portCur==0xff)
+                            {
+                                Valve.portCur = 0;
+                            }
                             if(Valve.dir==CCW)
                             {
                                 printd("CCW=");
@@ -261,7 +264,13 @@ void ProcessValve(void)
                                     }
                                     Positive = Valve.portDes-Valve.portCur+valveFix.fix.portCnt;
                                 }
-                                Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
+                                if(Valve.bHalfSeal && !Valve.portCur)
+                                {
+                                    Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
+                                    Valve.limitSignal -= SIGNAL_SUM/valveFix.fix.portCnt/2;
+                                }
+                                else
+                                    Valve.limitSignal = Positive*SIGNAL_SUM/valveFix.fix.portCnt;
                             }
                             else if(Valve.dir==CW)
                             {
@@ -363,20 +372,6 @@ void ProcessValve(void)
             }
         }
     }
-    else 
-    {
-        if(Valve.bHalfSeal)
-        {
-            float tpFloat=0;
-            tpFloat = (float)rdc.stepRound/valveFix.fix.portCnt;
-            tpFloat /= 2;
-            if(!MotionStatus[AXSV])
-            {
-                AxisMoveAbs(AXSV, -(int)tpFloat, accel[AXSV], decel[AXSV], speed[AXSV]);
-                Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
-            }
-        }
-    }
 }
 
 /*
@@ -395,7 +390,7 @@ void ValveLimitDetect(void)
                     return;
                 if(sig.bRdPulse==true)
                 {
-//                    printd("\r\nL%d",Valve.OptBlock);
+                    //printd("\r\nL%d",Valve.OptBlock);
                     sig.pulseBlock[sig.num] = Valve.OptBlock;
                     ++sig.count;
                 }
@@ -418,6 +413,7 @@ void ValveLimitDetect(void)
             }
             else
                 syspara.pwrOn = false;
+            Valve.nowBlockCnt = Valve.OptBlock;
             Valve.OptBlock = 0;
         }
     }
@@ -426,7 +422,7 @@ void ValveLimitDetect(void)
         ++Valve.OptBlock;
         if(sig.bRdPulse==false)
         {
-            if(syspara.shiftOnece==true && syspara.dbgStop==false)
+            if(syspara.shiftOnece==true && syspara.dbgStop==false && !Valve.bNewInit)
             {
                 if(Valve.cntSignal==Valve.limitSignal)
                 {// 修正坐标
@@ -467,7 +463,7 @@ void ValveLimitDetect(void)
                     return;
                 if(sig.bRdPulse==true)
                 {
-//                    printd("\r\nH%d",Valve.OptGap);
+                    //printd("\r\nH%d",Valve.OptGap);
                     sig.pulseGap[sig.num++] = Valve.OptGap;
                 }
                 else
@@ -486,6 +482,7 @@ void ValveLimitDetect(void)
             }
             else
                 syspara.pwrOn = false;
+            Valve.nowGapCnt = Valve.OptGap;
             Valve.OptGap = 0;
         }
     }
@@ -509,7 +506,8 @@ void ValveLimitDetect(void)
                     {
                         if(Valve.status&VALVE_INITING)
                         {
-                            Valve.portCur = 0xff;
+                            Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
+                            Valve.portCur = valveFix.fix.portCnt;
                             syspara.shiftOnece = false;
                         }
                         else
@@ -555,15 +553,6 @@ void ValveLimitDetect(void)
                         }
                     }
                     
-                    if(!Valve.bErr)
-                    {
-                        Valve.retryTms = 0;
-                        Valve.portDes = 0;
-                    }
-                    else
-                    {
-                        Valve.bErr = 0;
-                    }
                     Valve.passByOne = 0;
                     Valve.status &= ~VALVE_RUNNING;
                     if(!(Valve.status&VALVE_ERR))

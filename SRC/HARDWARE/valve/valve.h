@@ -18,13 +18,14 @@
 #define VALVE_DIR		    PAout(6)
 #define VALVE_CLK		    PAout(7)
 
-#define RETRY_TIMES         3                       // 重试次数
+#define RETRY_TIMES         2                       // 重试次数
 #define SIGNAL_SUM          48                      // 码盘检验次数
 
 #define VALVE_INITING       0x80
 #define VALVE_RUN_END       0x40
 #define VALVE_RUNNING       0x08
 #define VALVE_ERR           0x20
+#define OPT_ERR             0x30
 
 //#define PULSE_CNT_EN
 #define RDC01					1
@@ -88,13 +89,14 @@ typedef struct
     short         cntSignal;       // 信号个数
 
     unsigned char bNewInit;         // 刚复位完成
-    unsigned char bReInit;          // 再次复位转动
     unsigned short ErrBlinkTime;    //错误灯提示间隔
     unsigned char fixOrg;          	// 原点补偿
     unsigned char spd;          // 再次复位转动
 
     unsigned int OptGap;           //光耦高电平脉冲步数
     unsigned int OptBlock;            //光耦低电平脉冲步数
+    unsigned int nowGapCnt;            //光耦低电平脉冲步数
+    unsigned int nowBlockCnt;            //光耦低电平脉冲步数
     unsigned int stpCnt;            //初始化后开始补偿的步数
 
     unsigned int BaudRate;          //运行的波特率值

@@ -1,28 +1,66 @@
 #define _SIGNAL_GLOBALS_
 #include "common.h"
 
-
+static bool optStaLst=false;
+void getOptStartStatus(void)
+{
+    optStaLst = (bool)VALVE_OPT;
+}
 
 /*
 
 */
 bool GettCliffSignal(void)
 {
-    static bool lastSta=false;
     bool bCliff=false;
 
-    if(VALVE_OPT)
+    if(optStaLst==(bool)VALVE_OPT)
     {
-        if(lastSta==false)
-            bCliff = true;
-        lastSta = true;
+        return false;
+    }
+    if(VALVE_OPT)
+    {// 齿片
+        if(optStaLst==false)
+        {
+            printd("\r\n gap %d", Valve.nowGapCnt);
+            if(Valve.nowGapCnt>(sig.pulseGap[0]-sig.pulseGap[0]/3) && Valve.nowGapCnt<(sig.pulseGap[1]*2))
+            {
+//                printd(" %d", Valve.nowGapCnt);
+                Valve.nowGapCnt = 0;
+                bCliff = true;
+            }
+            else
+            {
+                printd(" err %d %d %d", Valve.nowGapCnt, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
+            }
+        }
     }
     else
     {
-        if(lastSta==true)
-            bCliff = true;
-        lastSta = false;
+        if(optStaLst==true)
+        {
+            printd("\r\n block %d", Valve.nowBlockCnt);
+            if(Valve.nowBlockCnt>(sig.pulseBlock[1]-sig.pulseBlock[1]/2) && Valve.nowBlockCnt<(sig.pulseBlock[0]*2))
+            {
+//                printd(" %d", Valve.nowBlockCnt);
+                Valve.nowBlockCnt = 0;
+                bCliff = true;
+            }
+            else 
+            {
+                if(Valve.cntSignal)
+                {
+                    Valve.status = OPT_ERR;
+                    printd(" err %d %d %d", Valve.nowBlockCnt, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
+                }
+                else
+                {// 第一个由于是在半齿开始，脉冲值会小，此值不做报错
+                    bCliff = true;
+                }
+            }
+        }
     }
+    optStaLst = (bool)VALVE_OPT;
     return bCliff;
 }
 
@@ -224,7 +262,6 @@ void SignalScan(void)
             Valve.stpCnt = 0;
             Valve.portDes = 0;
             Valve.passByOne = 0;
-            Valve.bReInit = 1;
             Valve.retryTms = 0;
             syspara.protectTimeOut = 0;
             Valve.initStep = 0;
