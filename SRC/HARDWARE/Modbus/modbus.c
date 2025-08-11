@@ -589,18 +589,14 @@ void ModbusProces(void)
     			ModbusPara.sERR = ERR_MB_DEVICE;
     		}
     		ModbusPara.rCnt = 0;
-    		Modbus_ERROR();
     		ModbusPara.sRUN = MB_IDEL;
     	}
         else
         {
     		ModbusPara.rCnt = 0;
-    		Modbus_ERROR();
     		ModbusPara.sRUN = MB_IDEL;
         }
 	}
-    if(ModbusPara.sRUN==MB_IDEL)
-	    Modbus_ERROR();
 }
 
 

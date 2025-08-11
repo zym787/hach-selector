@@ -1,8 +1,6 @@
 #define _PROTEXT_GLOBALS_
 #include "common.h"
 
-
-
 void CommInit(void)
 {
     protext.stepCnt = PROTOCOL_HEAD;
@@ -29,6 +27,7 @@ void CommInit(void)
 	delay_ms(100);
 }
 
+
 /*
 */
 void RxDataProcessEnd(void)
@@ -37,12 +36,6 @@ void RxDataProcessEnd(void)
     protext.rxCount = 0;
     protext.rxTimeOn = 0;
     protext.rxTimeCnt = 0;
-//    #ifdef EN_UART3_TX
-//    Usart2InterruptEnable();
-//    Usart3InterruptEnable();
-//    protext.send232Cnt = 0;
-//    protext.send485Cnt = 0;
-//    #endif
 }
 
 /*
@@ -52,7 +45,7 @@ void ERR_Reset(void)
 	protext.rxCount = 0;
 	protext.stepCnt = PROTOCOL_HEAD;
 	protext.f_RxErr = 2;
-//    prInfo(syspara.typeInfo, "\r\n Err");
+    memset(protext.usartBuf, 0, sizeof(protext.usartBuf));
 }
 
 
@@ -64,62 +57,6 @@ void RCV_Buf(unsigned char buf)
     protext.time = 0;
 }
 
-
-/*
-*/
-//void RxUsart(uint8 res)
-//{
-//    if(protext.time>100)
-//    {
-//        protext.time = 0;
-//        protext.stepCnt = 0;
-//        ERR_Reset();
-//    }
-
-//	switch(protext.stepCnt)
-//	{
-//		case PROTOCOL_HEAD:
-//			if(res == HEAD_BYTE)
-//			{
-//				RCV_Buf(res);
-//				protext.stepCnt = PROTOCOL_ADDR;
-//			}
-//			break;
-//		case PROTOCOL_ADDR:
-//			if(res == ModbusPara.mAddrs)
-//			{
-//				RCV_Buf(res);
-//				protext.stepCnt = PROTOCOL_COMMAND;
-//			}
-//            else
-//            {
-//			    ERR_Reset();
-//            }
-//			break;
-//		case PROTOCOL_COMMAND:
-//            RCV_Buf(res);
-//            protext.dataLen = LEN_DATA;
-//            protext.stepCnt = PROTOCOL_DATA;
-//            break;
-//		case PROTOCOL_DATA:
-//			RCV_Buf(res);
-//			if(--protext.dataLen>0)
-//			{
-//				protext.stepCnt = PROTOCOL_DATA;
-//			}
-//			else
-//			{
-//				protext.stepCnt = PROTOCOL_CS;
-//			}
-//			break;
-//		case PROTOCOL_CS:
-//			RCV_Buf(res);
-//			protext.stepCnt = PROTOCOL_OK;
-//			break;
-//		default:
-//			break;
-//	}
-//}
 
 void RxUsart(void)
 {

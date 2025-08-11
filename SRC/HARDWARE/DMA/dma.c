@@ -95,24 +95,24 @@ void DMA1_Channel7_IRQHandler(void)
 */
 void MYDMA_RX_Cfg(DMA_Channel_TypeDef*DMA_CHx, unsigned int cpar, unsigned int cmar, unsigned short cndtr)
 {
-    RCC->AHBENR|=RCC_AHBPeriph_DMA1;    //开启DMA1时钟
-    delay_ms(5);                        //等待DMA时钟稳定，必须延时
-    DMA_CHx->CPAR=cpar;                 //DMA1 外设地址 
-    DMA_CHx->CMAR=(unsigned int)cmar;   //DMA1,存储器地址
-    DMA_CHx->CNDTR=cndtr;               //DMA1,传输数据量
+    RCC->AHBENR |= RCC_AHBPeriph_DMA1;      //开启DMA1时钟
+    delay_ms(5);                            //等待DMA时钟稳定，必须延时
+    DMA_CHx->CPAR = cpar;                   //DMA1 外设地址 
+    DMA_CHx->CMAR = (unsigned int)cmar;     //DMA1,存储器地址
+    DMA_CHx->CNDTR = cndtr;                 //DMA1,传输数据量
     
-    DMA_CHx->CCR=0;                     //复位
-    DMA_CHx->CCR |= (1<<1);             //使能完成中断
-    DMA_CHx->CCR&=~(1<<4);              //从外设串口读
-    DMA_CHx->CCR&=~(1<<5);              //普通模式
-    DMA_CHx->CCR&=~(1<<6);              //外设地址非增量模式
-    DMA_CHx->CCR|=1<<7;                 //存储器增量模式
-    DMA_CHx->CCR&=~(1<<8);              //外设数据宽度为8位
-    DMA_CHx->CCR&=~(1<<10);             //存储器数据宽度8位
-    DMA_CHx->CCR|=1<<12;                //中等优先级
-    DMA_CHx->CCR&=~(1<<14);             //非存储器到存储器模式
+    DMA_CHx->CCR = 0;                       //复位
+    DMA_CHx->CCR |= (1<<1);                 //使能完成中断
+    DMA_CHx->CCR &= ~(1<<4);                //从外设串口读
+    DMA_CHx->CCR &= ~(1<<5);                //普通模式
+    DMA_CHx->CCR &= ~(1<<6);                //外设地址非增量模式
+    DMA_CHx->CCR |= 1<<7;                   //存储器增量模式
+    DMA_CHx->CCR &= ~(1<<8);                //外设数据宽度为8位
+    DMA_CHx->CCR &= ~(1<<10);               //存储器数据宽度8位
+    DMA_CHx->CCR |= 1<<12;                  //中等优先级
+    DMA_CHx->CCR &= ~(1<<14);               //非存储器到存储器模式
 
-    DMA_CHx->CCR|=(1<<0);               //启动DMA
+    DMA_CHx->CCR |= (1<<0);                 //启动DMA
     MY_NVIC_Init(3,3,DMA1_Channel3_IRQn,2);
     MY_NVIC_Init(3,3,DMA1_Channel6_IRQn,2);
 } 
@@ -123,10 +123,10 @@ void MYDMA_RX_Cfg(DMA_Channel_TypeDef*DMA_CHx, unsigned int cpar, unsigned int c
 */
 void MYDMA_Receive_Enable(USART_TypeDef *UART_CHx, DMA_Channel_TypeDef *DMA_CHx, uint16 buffLen)
 {
-    UART_CHx->CR3|=1<<6;                        //使能串口的DMA接收
-    DMA_CHx->CCR&=~(1<<0);                      //关闭DMA传输
-    DMA_CHx->CNDTR=(uint32)buffLen;             //DMA1,传输数据量
-    DMA_CHx->CCR|=(1<<0);                       //开启DMA传输
+    UART_CHx->CR3 |= 1<<6;                        //使能串口的DMA接收
+    DMA_CHx->CCR &= ~(1<<0);                      //关闭DMA传输
+    DMA_CHx->CNDTR = (uint32)buffLen;             //DMA1,传输数据量
+    DMA_CHx->CCR |= (1<<0);                       //开启DMA传输
 }
 
 /*
@@ -136,9 +136,9 @@ void DMA1_Channel3_IRQHandler(void)
 {
     if(DMA1->ISR&(1<<9))               //等待通道3传输完成 BIT: TCIF
     {
-        DMA1->IFCR|=1<<9;              //清除通道3传输完成标志 BIT: CTCIF      
+        DMA1->IFCR |= 1<<9;              //清除通道3传输完成标志 BIT: CTCIF      
         Napping();
-		if(*(protext.usartBuf+0) == HEAD_BYTE && *(protext.usartBuf+1) == ModbusPara.mAddrs)
+		if(*(protext.usartBuf+0)==HEAD_BYTE && *(protext.usartBuf+1)==ModbusPara.mAddrs)
 		{
             protext.rxCount = RECEIVE_LENS;
             protext.stepCnt = PROTOCOL_OK;
@@ -147,6 +147,9 @@ void DMA1_Channel3_IRQHandler(void)
         {
             ERR_Reset();
         }
+//        printd("\r\n");
+//        for(uint8 i=0; i<8; i++)
+//            printd(" %02x", *(protext.usartBuf+i));
         MYDMA_Receive_Enable(USART3, DMA1_Channel3, RECEIVE_LENS);
     }
 }
@@ -158,7 +161,7 @@ void DMA1_Channel6_IRQHandler(void)
 {
     if(DMA1->ISR&(1<<21))               //等待通道6传输完成 BIT: TCIF
     {
-        DMA1->IFCR|=1<<21;              //清除通道6传输完成标志 BIT: CTCIF
+        DMA1->IFCR |= 1<<21;              //清除通道6传输完成标志 BIT: CTCIF
         Napping();
 		if(*(protext.usartBuf+0) == HEAD_BYTE && *(protext.usartBuf+1) == ModbusPara.mAddrs)
 		{

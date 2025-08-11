@@ -119,6 +119,11 @@ void Usart2_Init(u32 pclk2,u32 bound)
     	USART2->CR1 |= 1<<5;              //接收缓冲区非空中断使能
         MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
     }
+    else
+    {
+    	USART2->CR1|= 1<<4;              //接收缓冲区非空中断使能
+        MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    }
     #endif
 }
 
@@ -143,13 +148,17 @@ void USART2_IRQHandler(void)
 {
 	char res;
 	res = res;
+    if(USART2->SR&(1<<4))      // idle
+    {
+		res=USART2->DR;
+        USART2->SR &= ~(1<<4);
+        MYDMA_Receive_Enable(USART2, DMA1_Channel6, RECEIVE_LENS);
+    }
 	if(USART2->SR&(1<<5))            //接收到数据
 	{
 		res=USART2->DR;
         if(syspara.typeProtocal==MY_MODBUS)
             ModbusReceive(res);
-//        else
-//            RxUsart(res);
     }
 }
 
@@ -186,8 +195,13 @@ void Usart3_Init(u32 pclk2,u32 bound)
     if(syspara.typeProtocal==MY_MODBUS)
     {
     	//使能接收中断
-    	USART3->CR1|= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
-    	USART3->CR1|= 1<<5;              //接收缓冲区非空中断使能
+    	USART3->CR1 |= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
+    	USART3->CR1 |= 1<<5;              //接收缓冲区非空中断使能
+    	MY_NVIC_Init(0,3,USART3_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    }
+    else
+    {
+    	USART3->CR1 |= 1<<4;              //接收缓冲区非空中断使能
     	MY_NVIC_Init(0,3,USART3_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
     }
     #endif
@@ -215,13 +229,17 @@ void USART3_IRQHandler(void)
 {
 	volatile u8 res;
 	res = res;
+    if(USART3->SR&(1<<4))      // idle
+    {
+		res=USART3->DR;
+        USART3->SR &= ~(1<<4);
+        MYDMA_Receive_Enable(USART3, DMA1_Channel3, RECEIVE_LENS);
+    }
 	if(USART3->SR&(1<<5))//接收到数据
 	{
 		res = USART3->DR;
         if(syspara.typeProtocal==MY_MODBUS)
             ModbusReceive(res);
-//        else
-//            RxUsart(res);
 	}
 }
 

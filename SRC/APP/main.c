@@ -391,8 +391,9 @@ void DebugOut(void)
             Valve.bGetOrg = 0;
             prInfo(syspara.typeInfo, "\r\n get/pass org %d", position[AXSV]);
         }
-         prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d",
+        prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d",
                 Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT);
+        printd("\r\n >> %02x %02x",protext.rxCount, protext.stepCnt);
 //        printd("\r\n");
 //        for(uint8 i=0; i<8; i++)
 //            printd(" %02x", *(protext.usartBuf+i));
