@@ -10,8 +10,6 @@
 #define DEBUG_MODBUS                0
 #define	RX_EN()		(PBout(1)=0)
 #define	TX_EN()		(PBout(1)=1)
-//#define	RX_EN()		(PAout(8)=0)
-//#define	TX_EN()		(PAout(8)=1)
 
 //======================  参数宏定义=================================
 #define MAX_ADDR                    1
@@ -41,10 +39,10 @@
 #define MODBUS_TIME_9600			(520)		// 520uS=(10/9600)/2
 #define MODBUS_TIME_19200			(260)		// 260uS=(10/19200)/2
 #define MODBUS_TIME					(10*1000000/BAUD_RATE_MODBUS/2)		// 260uS=(10/19200)/2
-#define BUS_IDLE_TIME				10		// 帧空闲(开始或结束)超过3.5~4个接收字符时间
-#define FRAME_ERR_TIME				4		// 数据接收超时,接收字符之间 超过1.5~2个接收字符时间
-#define NO_RESPONSE_TIME			500		// 通讯中断超时 约500*MODBUS_TIME
-#define NO_RESPONSE_TIME_BC			500		// 通讯中断超时 约500*MODBUS_TIME
+#define BUS_IDLE_TIME				40		// 帧空闲(开始或结束)超过3.5~4个接收字符时间
+#define FRAME_ERR_TIME				20		// 数据接收超时,接收字符之间 超过1.5~2个接收字符时间
+#define NO_RESPONSE_TIME			100		// 通讯中断超时 约500*MODBUS_TIME
+#define NO_RESPONSE_TIME_BC			100		// 通讯中断超时 约500*MODBUS_TIME
 //---- 通信状态参数-------------------------------------------------
 #define MB_IDEL						0X00	// 总线空闲、结束帧、起始帧
 #define MB_WAIT_HOST				0X01	// 主设备等待响应

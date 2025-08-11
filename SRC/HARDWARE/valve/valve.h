@@ -90,22 +90,22 @@ typedef struct
     unsigned char bHalfSeal;             // 出错标志
     short         cntSignal;        // 信号个数
 
-    unsigned char bNewInit;         // 刚复位完成
     unsigned short ErrBlinkTime;    //错误灯提示间隔
+    unsigned char bNewInit;         // 刚复位完成
     unsigned char fixOrg;          	// 原点补偿
     unsigned char spd;              // 再次复位转动
+    unsigned char bHalfDo;          // 走半通道或者1通道的后续动作
 
-//    unsigned int OptGap;            //光耦高电平脉冲步数
-//    unsigned int OptBlock;          //光耦低电平脉冲步数
-    unsigned int nowGap;         //光耦低电平脉冲步数
-    unsigned int nowBlock;       //光耦低电平脉冲步数
+    unsigned int nowGapTp;          //光耦低电平脉冲步数
+    unsigned int nowBlockTp;        //光耦低电平脉冲步数
+    unsigned int nowGap;            //光耦低电平脉冲步数
+    unsigned int nowBlock;          //光耦低电平脉冲步数
     unsigned int stpCnt;            //初始化后开始补偿的步数
 
     unsigned int BaudRate;          //运行的波特率值
     unsigned char SnCode[LEN_SN];   // 序列码
     unsigned char serialNum;
     unsigned char serialPort[PREPORTCNT];
-    unsigned char bGetOrg;
 }_VALVE_T;
 PEXT _VALVE_T Valve;
 
@@ -119,7 +119,6 @@ typedef struct
 }RDC_T;
 PEXT RDC_T rdc;
 
-// 信号出错
 enum
 {
     NONE_ERR,               // 没有错误
@@ -128,7 +127,6 @@ enum
     SIGNAL_CONT_GAP_ERR,    // 缺口持续计数错误
     SIGNAL_CONT_BLOCK_ERR,  // 挡片持续计数错误      
 };
-
 #define FIX_VAL_LENGHT      14
 typedef union
 {

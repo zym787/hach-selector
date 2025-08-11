@@ -1,69 +1,6 @@
 #define _SIGNAL_GLOBALS_
 #include "common.h"
 
-static bool optStaLst=false;
-void getOptStartStatus(void)
-{
-    optStaLst = (bool)VALVE_OPT;
-}
-
-/*
-
-*/
-bool GettCliffSignal(void)
-{
-    bool bCliff=false;
-
-    if(optStaLst==(bool)VALVE_OPT)
-    {
-        return false;
-    }
-    if(VALVE_OPT)
-    {// 齿片
-        if(optStaLst==false)
-        {
-            prInfo(syspara.typeInfo, "\r\n gap %d", Valve.nowGap);
-            if(Valve.nowGap>(sig.pulseGap[0]-sig.pulseGap[0]/3) && Valve.nowGap<(sig.pulseGap[1]*2))
-            {
-//                prInfo(syspara.typeInfo, " %d", Valve.nowGapCnt);
-                Valve.nowGap = 0;
-                bCliff = true;
-            }
-            else
-            {
-                prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowGap, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
-            }
-        }
-    }
-    else
-    {
-        if(optStaLst==true)
-        {
-            prInfo(syspara.typeInfo, "\r\n block %d", Valve.nowBlock);
-            if(Valve.nowBlock>(sig.pulseBlock[1]-sig.pulseBlock[1]/2) && Valve.nowBlock<(sig.pulseBlock[0]*2))
-            {
-//                prInfo(syspara.typeInfo, " %d", Valve.nowBlockCnt);
-                Valve.nowBlock = 0;
-                bCliff = true;
-            }
-            else 
-            {
-                if(Valve.cntSignal)
-                {
-                    Valve.status = OPT_ERR;
-                    prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowBlock, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
-                }
-                else
-                {// 第一个由于是在半齿开始，脉冲值会小，此值不做报错
-                    bCliff = true;
-                }
-            }
-        }
-    }
-    optStaLst = (bool)VALVE_OPT;
-    return bCliff;
-}
-
 /*
     降序排序
 */
@@ -264,17 +201,16 @@ void SignalScan(void)
             break;
         case 2:
             prInfo(syspara.typeInfo, "\r\n 扫描完成启动复位");
-            VALVE_ENA = ON;
+            VALVE_ENA = ENABLE;
             Valve.status = VALVE_INITING;
             syspara.pwrOn = true;
-            Valve.ErrBlinkTime = NORMAL_BLINK;
             Valve.stpCnt = 0;
             Valve.portDes = 0;
-            Valve.passByOne = 0;
             Valve.retryTms = 0;
-            syspara.protectTimeOut = 0;
             Valve.initStep = 0;
-            Valve.stpCnt = 0;
+            Valve.bNewInit = 1;
+            Valve.bErr = NONE_ERR;
+            syspara.protectTimeOut = 0;
             sig.stpScan = 0;
             break;
         default:

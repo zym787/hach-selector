@@ -148,17 +148,23 @@ void USART2_IRQHandler(void)
 {
 	char res;
 	res = res;
-    if(USART2->SR&(1<<4))      // idle
+    if(syspara.typeProtocal==MY_MODBUS)
     {
-		res=USART2->DR;
-        USART2->SR &= ~(1<<4);
-        MYDMA_Receive_Enable(USART2, DMA1_Channel6, RECEIVE_LENS);
+    	if(USART2->SR&(1<<5))            //接收到数据
+    	{
+    		res=USART2->DR;
+            if(syspara.typeProtocal==MY_MODBUS)
+                ModbusReceive(res);
+        }
     }
-	if(USART2->SR&(1<<5))            //接收到数据
-	{
-		res=USART2->DR;
-        if(syspara.typeProtocal==MY_MODBUS)
-            ModbusReceive(res);
+    else
+    {
+        if(USART2->SR&(1<<4))      // idle
+        {
+    		res=USART2->DR;
+            USART2->SR &= ~(1<<4);
+            MYDMA_Receive_Enable(USART2, DMA1_Channel6, RECEIVE_LENS);
+        }
     }
 }
 
@@ -229,18 +235,24 @@ void USART3_IRQHandler(void)
 {
 	volatile u8 res;
 	res = res;
-    if(USART3->SR&(1<<4))      // idle
+    if(syspara.typeProtocal==MY_MODBUS)
     {
-		res=USART3->DR;
-        USART3->SR &= ~(1<<4);
-        MYDMA_Receive_Enable(USART3, DMA1_Channel3, RECEIVE_LENS);
+    	if(USART3->SR&(1<<5))//接收到数据
+    	{
+    		res = USART3->DR;
+            if(syspara.typeProtocal==MY_MODBUS)
+                ModbusReceive(res);
+    	}
     }
-	if(USART3->SR&(1<<5))//接收到数据
-	{
-		res = USART3->DR;
-        if(syspara.typeProtocal==MY_MODBUS)
-            ModbusReceive(res);
-	}
+    else
+    {
+        if(USART3->SR&(1<<4))      // idle
+        {
+    		res=USART3->DR;
+            USART3->SR &= ~(1<<4);
+            MYDMA_Receive_Enable(USART3, DMA1_Channel3, RECEIVE_LENS);
+        }
+    }
 }
 
 #if 0

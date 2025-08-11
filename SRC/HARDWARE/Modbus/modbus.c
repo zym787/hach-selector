@@ -8,9 +8,6 @@ void ModbusInit(void)
     RCC->APB2ENR |= (RCC_APB2Periph_GPIOB);
     GPIOB->CRL &= (GPIO_Crl_P1);
     GPIOB->CRL |= (GPIO_Mode_Out_PP_50MHz_P1);
-//    RCC->APB2ENR |= (RCC_APB2Periph_GPIOA);
-//    GPIOA->CRH &= (GPIO_Crh_P8);
-//    GPIOA->CRH |= (GPIO_Mode_Out_PP_50MHz_P8);
 
 	RX_EN();			                        // 开机为接收模式
 	I2CPageRead_Nbytes(ADDR_BAUD, LEN_BAUD, &syspara.bdrate);
@@ -296,16 +293,6 @@ void MB_ReadHoldingRegisters(void)
                 for(uint8 i=0; i<byteCount; i++)
                 {
                     prInfo(syspara.comInfo, " %02x", ModbusPara.tBuf[i]);
-//                    #ifdef INFO_DEBUG
-//                    if((Valve.status==VALVE_ERR && errRecord.bPrint==false))
-//                    {
-//                        errRecord.rplyLast[i] = ModbusPara.tBuf[i];
-//                        if(i==byteCount-1)
-//                        {
-//                            errRecord.bPrint = true;
-//                        }
-//                    }
-//                    #endif
                 }
     		}
     		else
@@ -380,10 +367,13 @@ void MB_PresetSingleHoldingRegister(void)
             Valve.initStep = 0;
             Valve.portDes = 0;
             Valve.stpCnt = 0;
+            Valve.bHalfDo = 0;
             Valve.bNewInit = 1;
             syspara.pwrOn = true;
             Valve.bErr = NONE_ERR;
             syspara.protectTimeOut = 0;
+            Valve.cntSignal = 0;
+            Valve.statusLast = VALVE_NONE;
             VALVE_ENA = ENABLE;
             I2CPageRead_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
             (valveFix.fix.portCnt&&valveFix.fix.portCnt>32)?(valveFix.fix.portCnt=10):(valveFix.fix.portCnt);
@@ -413,12 +403,6 @@ void MB_PresetSingleHoldingRegister(void)
         {// 序列码指令
             if(ModbusPara.rBuf[3]==MY_MODBUS || ModbusPara.rBuf[3]==EXT_COMM)
             {
-//                syspara.typeProtocal = ModbusPara.rBuf[3];
-                prInfo(syspara.typeInfo, "\r\n set protocal to");
-                if(ModbusPara.rBuf[3]==MY_MODBUS)
-                    prInfo(syspara.typeInfo, "\r\n MODBUS");
-                else
-                    prInfo(syspara.typeInfo, "\r\n EXT PROTCAL");
                 I2CPageWrite_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &ModbusPara.rBuf[3]);
             }
         }
@@ -431,8 +415,6 @@ void MB_PresetSingleHoldingRegister(void)
         }
         else if(func_num==0xff)
         {
-            prInfo(syspara.typeInfo, "\r\n rcv para: %02x %02x %02x %02x",
-                ModbusPara.rBuf[3], ModbusPara.rBuf[5], ModbusPara.rBuf[6], ModbusPara.rBuf[7]);
             I2CPageWrite_Nbytes(ADDR_MODULE_NUM, LEN_MODULE_NUM, &ModbusPara.rBuf[3]);
             I2CPageWrite_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &ModbusPara.rBuf[6]);
             I2CPageWrite_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &ModbusPara.rBuf[7]);
@@ -559,10 +541,6 @@ void ModbusProces(void)
                 for(i=0; i<ModbusPara.rCnt; i++)
                 {
                     prInfo(syspara.comInfo, " %02x", ModbusPara.rBuf[i]);
-//                    #ifdef INFO_DEBUG
-//                    if(errRecord.bPrint==false)
-//                        errRecord.cmdLast[i] = ModbusPara.rBuf[i];
-//                    #endif
                 }
 
     			{
@@ -588,15 +566,13 @@ void ModbusProces(void)
     		{
     			ModbusPara.sERR = ERR_MB_DEVICE;
     		}
-    		ModbusPara.rCnt = 0;
-    		ModbusPara.sRUN = MB_IDEL;
     	}
-        else
-        {
-    		ModbusPara.rCnt = 0;
-    		ModbusPara.sRUN = MB_IDEL;
-        }
+		ModbusPara.rCnt = 0;
+		Modbus_ERROR();
+		ModbusPara.sRUN = MB_IDEL;
 	}
+    if(ModbusPara.sRUN==MB_IDEL)
+	    Modbus_ERROR();
 }
 
 

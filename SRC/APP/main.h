@@ -7,8 +7,8 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                107
-#define SOFT_VS                 "V1.0.7r8"
+#define SOFT_VER                108
+#define SOFT_VS                 "V1.0.8r9"
 //#define SOFT_VS                 "V2.0.3r3"
 
 //------------------------------------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ PEXT int main(void);
 PEXT void DebugOut(void);
 PEXT void UsrLimit(void);
 PEXT void errProcRun(void);
-PEXT void errActionImme(void);
+PEXT uint8 errActionImme(void);
 
 
 

@@ -34,8 +34,6 @@ void TIM2_IRQHandler(void)
         else
             protext.time = 0;;
         StrProc();
-        if(MotionStatus[AXSV])
-            ++syspara.sigRunTime;
     }
 }
 

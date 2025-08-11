@@ -1,6 +1,8 @@
 #define _PROTEXT_GLOBALS_
 #include "common.h"
 
+
+
 void CommInit(void)
 {
     protext.stepCnt = PROTOCOL_HEAD;
@@ -27,7 +29,6 @@ void CommInit(void)
 	delay_ms(100);
 }
 
-
 /*
 */
 void RxDataProcessEnd(void)
@@ -36,6 +37,12 @@ void RxDataProcessEnd(void)
     protext.rxCount = 0;
     protext.rxTimeOn = 0;
     protext.rxTimeCnt = 0;
+//    #ifdef EN_UART3_TX
+//    Usart2InterruptEnable();
+//    Usart3InterruptEnable();
+//    protext.send232Cnt = 0;
+//    protext.send485Cnt = 0;
+//    #endif
 }
 
 /*
@@ -189,7 +196,12 @@ void AskStaProcess(uint32 sta8)
                 if(Valve.status==VALVE_ERR)
                     protext.replyBuf[5] = VALVE_ERR;
                 else
-                    protext.replyBuf[5] = 0x08;
+                {
+                    if(Valve.status&VALVE_INITING)
+                        protext.replyBuf[5] = 0x88;
+                    else
+                        protext.replyBuf[5] = 0x08;
+                }
             }
             else
             {
@@ -250,7 +262,6 @@ void NormalAction(void)
     	    Valve.portDes = Itemp;
         else
     	    Valve.bErrRetn = 0x01;
-        syspara.sigRunTime = 0;
     }
 }
 
@@ -330,10 +341,13 @@ void RstAction(void)
     Valve.initStep = 0;
     Valve.portDes = 0;
     Valve.stpCnt = 0;
+    Valve.bHalfDo = 0;
     Valve.bNewInit = 1;
     syspara.pwrOn = true;
     Valve.bErr = NONE_ERR;
     syspara.protectTimeOut = 0;
+    Valve.cntSignal = 0;
+            Valve.statusLast = VALVE_NONE;
     I2CPageRead_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
     (valveFix.fix.portCnt&&valveFix.fix.portCnt>32)?(valveFix.fix.portCnt=10):(valveFix.fix.portCnt);
     I2CPageRead_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
@@ -356,7 +370,6 @@ void WRAction(void)
 	Valve.SnCode[3] = protext.usartBuf[6];  			// ²¹³¥Öµ
 	Valve.SnCode[4] = 0X00;  			            // ²¹³¥Öµ
     I2CPageWrite_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
-    prInfo(syspara.typeInfo, "\r\n WR SN");
 }
 
 /*
@@ -365,7 +378,6 @@ void WRAction(void)
 void RDAction(void)
 {
     I2CPageRead_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
-    prInfo(syspara.typeInfo, "\r\n RD SN");
 }
 
 /*
@@ -375,8 +387,7 @@ void ProtocalSet(void)
 {
     if(protext.usartBuf[6]==MY_MODBUS || protext.usartBuf[6]==EXT_COMM)
     {
-//        syspara.typeProtocal = ModbusPara.rBuf[3];
-        I2CPageWrite_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &ModbusPara.rBuf[3]);
+        I2CPageWrite_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &protext.usartBuf[6]);
     }
 }
 
