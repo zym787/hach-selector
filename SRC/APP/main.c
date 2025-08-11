@@ -209,7 +209,6 @@ void GPIOInit(void)
     RCC->APB2ENR |= (RCC_APB2Periph_GPIOB);
     GPIOB->CRL &= (GPIO_Crl_P1);
     GPIOB->CRL |= (GPIO_Mode_Out_PP_50MHz_P1);
-
 }
 
 
@@ -219,6 +218,8 @@ void errProcRun(void)
     {
         if(!(Valve.status&VALVE_INITING))
         {// 复位时不做重新找位动作
+            srd[AXSV].accel_count = -1;
+            srd[AXSV].run_state = DECEL;
             if(Valve.retryTms<RETRY_TIMES-1)
             {
                 Valve.status = VALVE_INITING;
@@ -228,6 +229,7 @@ void errProcRun(void)
                 Valve.initStep = 0;
                 syspara.protectTimeOut = 0;
                 Valve.cntSignal = 0;
+                Valve.bHalfDo = 0;
                 prInfo(syspara.typeInfo, "\r\n reShift %d %d", Valve.portDes, Valve.retryTms);
             }
             else
@@ -251,6 +253,8 @@ uint8 errActionImme(void)
 {
     if(Valve.status != VALVE_ERR)
     {
+        srd[AXSV].accel_count = -1;
+        srd[AXSV].run_state = DECEL;
         Valve.portDes = 0;
         Valve.ErrBlinkTime = RETRY_TIME_OUT;
         Valve.status = VALVE_ERR;
@@ -308,6 +312,13 @@ void every50MilliSecDoing(void)
                     Valve.bHalfDo = 2;
                     syspara.shiftOnece = true;
                     Valve.portCur = valveFix.fix.portCnt;
+                    if(Valve.portDes==valveFix.fix.portCnt)
+                    {
+                        Valve.portDes = 0;
+                        Valve.retryTms = 0;
+                        Valve.cntSignal = 0;
+                        Valve.bErr = NONE_ERR;
+                    }
                     Valve.status = VALVE_RUN_END;
                 }
             }
@@ -334,7 +345,6 @@ void FlagClear(void)
     {
         syspara.dbgStop = false;
     }
-
 }
 
 /*

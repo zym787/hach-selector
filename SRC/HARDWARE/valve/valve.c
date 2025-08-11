@@ -321,7 +321,7 @@ void ProcessValve(void)
         				Valve.status |= VALVE_RUNNING; 	    // 置位运行标志
                         Valve.statusLast = VALVE_RUNNING;
                         syspara.protectTimeOut = 0;
-                        syspara.bSkipFirstSig = false;
+//                        syspara.bSkipFirstSig = false;
                     }
                     else if(Valve.portCur==Valve.portDes)
                     {
@@ -459,8 +459,8 @@ void EXTI15_10_IRQHandler(void)
         }
     }
     // 处理标志位避免开机或单次运行转向时的首个宽度信号干扰
-    if(syspara.bSkipFirstSig==false)
-        syspara.bSkipFirstSig = true;
+//    if(syspara.bSkipFirstSig==false)
+//        syspara.bSkipFirstSig = true;
     if(syspara.pwrOn==true)
         syspara.pwrOn = false;
 }
@@ -496,7 +496,7 @@ void ProcessInterrupt(void)
             ++Valve.nowGapTp;
             if(sig.bRdPulse==false)
             {
-                if(!printOnce && ((OptGap>(sig.pulseGap[1]+sig.pulseGap[3])<<1 && syspara.bSkipFirstSig==true) || 
+                if(!printOnce && ((OptGap>(sig.pulseGap[1]+sig.pulseGap[3])/*<<1 && syspara.bSkipFirstSig==true*/) || 
                     OptGap>(sig.pulseGap[1]+sig.pulseGap[3])<<2))
                 {// 无信号跳变的信号异常，堵转报错监测，堵转超出误差最大值两倍(使用左移乘法)报错，立即停机
                     printOnce = true;
@@ -543,7 +543,7 @@ void ProcessInterrupt(void)
             ++Valve.nowBlockTp;
             if(sig.bRdPulse==false)
             {
-                if(!printOnce && ((OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])<<1 && syspara.bSkipFirstSig==true) ||
+                if(!printOnce && ((OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])/*<<1 && syspara.bSkipFirstSig==true*/) ||
                     OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])<<2))
                 {// 无信号跳变的信号异常，堵转报错监测，堵转超出误差最大值两倍(使用左移乘法)报错，立即停机
                     printOnce = true;
@@ -594,55 +594,17 @@ void ProcessInterrupt(void)
                         srd[AXSV].accel_count = -Valve.fixOrg*rdc.stepP01dgr/2;
                         srd[AXSV].run_state = DECEL;
                         position[AXSV] = Valve.fixOrg*rdc.stepP01dgr/2;
-                        if(Valve.bHalfSeal)
+                        if(Valve.status&VALVE_INITING)
                         {
-                            if(Valve.status&VALVE_INITING)
-                            {
-                                Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
-                                Valve.portCur = valveFix.fix.portCnt;
-                                syspara.shiftOnece = false;
-                            }
-                            else
-                            {
-                                if(Valve.cntSignal==Valve.limitSignal)
-                                {
-                                    Valve.portCur = valveFix.fix.portCnt;
-                                    Valve.cntSignal = 0;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if(Valve.status&VALVE_INITING)
-                            {
-                                Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
-                                Valve.portCur = valveFix.fix.portCnt;
-                                syspara.shiftOnece = false;
-                            }
-                            else
-                            {
-                                if(Valve.cntSignal==Valve.limitSignal)
-                                {
-                                    Valve.portCur = valveFix.fix.portCnt;
-                                    Valve.cntSignal = 0;
-                                }
-                            }
+                            Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
+//                            Valve.portCur = valveFix.fix.portCnt;
+                            syspara.shiftOnece = false;
                         }
                         Valve.passByOne = 0;
                         // 如果目标位是12号位，即已到目标，清除错误标志
-                        if(Valve.portDes==valveFix.fix.portCnt || Valve.bErr)
-                        {
-                            if(Valve.portDes==valveFix.fix.portCnt)
-                                Valve.bErr = NONE_ERR;
-                            Valve.status &= ~VALVE_RUNNING;
-                            if(!(Valve.status&VALVE_ERR))
-                                Valve.status |= VALVE_RUN_END;
-                        }
                         // 清时间，保证不会连续复位转动
                         timerPara.timeMilli = 0;
-                        if(Valve.bErr)
-                            syspara.shiftOnece = true;
-                        else
+                        if(!Valve.bErr)
                             Valve.retryTms = 0;
                         getPrePort();
                     }

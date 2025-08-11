@@ -7,8 +7,8 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                108
-#define SOFT_VS                 "V1.0.9r0"
+#define SOFT_VER                109
+#define SOFT_VS                 "V1.0.9r2"
 //#define SOFT_VS                 "V2.0.3r3"
 
 //------------------------------------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ typedef struct
     bool    reShift;        // 出错后重新走位
     bool    dbgStop;     // 首次运行
     bool    bInterrupt;
-    bool    bSkipFirstSig;      // 跳过首个信号值
+//    bool    bSkipFirstSig;      // 跳过首个信号值
     uint16  sigRunTime;         // 单次电机运行时间
 }_SYS_T;
 PEXT _SYS_T syspara;
