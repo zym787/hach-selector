@@ -21,6 +21,7 @@
 #define RETRY_TIMES         2                       // 重试次数
 #define SIGNAL_SUM          48                      // 码盘检验次数
 
+#define VALVE_NONE          0x00
 #define VALVE_INITING       0x80
 #define VALVE_RUN_END       0x40
 #define VALVE_RUNNING       0x08
@@ -84,6 +85,7 @@ typedef struct
     unsigned char passByOne;        //重新校准1号位标志
     unsigned char bErrRetn;       //
     unsigned char threshSignal;       // 信号阈值个数
+    
     unsigned char bErr;             // 出错标志
     unsigned char bHalfSeal;             // 出错标志
     short         cntSignal;       // 信号个数
@@ -149,6 +151,7 @@ PEXT void InitValve(void);
 PEXT void ValveProcess(void);
 PEXT void ProcessValve(void);
 PEXT void ValveLimitDetect(void);
+PEXT void ProcessInterrupt(void);
 PEXT void TestBurn(void);
 
 #undef PEXT

@@ -15,7 +15,7 @@ void TIM2_Init(uint16 arr,uint16 psc)
 	TIM2->PSC=psc;  	//预分频器7200,得到10Khz的计数时钟
 	TIM2->DIER|=1<<0;   //允许更新中断
 	TIM2->CR1|=0x01;    //使能定时器2
-	MY_NVIC_Init(2,3,TIM2_IRQn,2);//抢占1，子优先级3，组2
+	MY_NVIC_Init(1,3,TIM2_IRQn,2);//抢占1，子优先级3，组2
 }
 
 //定时器2中断服务程序
@@ -51,7 +51,7 @@ void TIM3_Init(uint16 arr,uint16 psc)
 	TIM3->PSC=psc;  	//预分频器7200,得到10Khz的计数时钟
 	TIM3->DIER|=1<<0;   //允许更新中断
 	TIM3->CR1|=0x01;    //使能定时器3
-	MY_NVIC_Init(1,2,TIM3_IRQn,2);//抢占1，子优先级3，组2
+	MY_NVIC_Init(0,2,TIM3_IRQn,2);//抢占1，子优先级3，组2
 }
 
 //定时器3中断服务程序
@@ -77,7 +77,7 @@ void TIM4_Init(uint16 arr,uint16 psc)
 	TIM4->PSC=psc;  	//预分频器7200,得到10Khz的计数时钟
 	TIM4->DIER|=1<<0;   //允许更新中断
 	TIM4->CR1|=0x01;    //使能定时器4
-	MY_NVIC_Init(1,1,TIM4_IRQn,2);//抢占1，子优先级3，组2
+	MY_NVIC_Init(2,3,TIM4_IRQn,2);//抢占1，子优先级3，组2
 }
 
 //定时器4中断服务程序
@@ -98,7 +98,7 @@ void HardFault_Handler(void)
 	if(!flg)
 	{
 		flg = 1;
-        printf("\r\n An HardFault occur");
+//        printf("\r\n An HardFault occur");
 	}
 }
 #if 0

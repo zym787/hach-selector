@@ -53,13 +53,24 @@ typedef struct
     uint8   f_RxErr;
     uint8   usartBuf[128];
     uint8   replyBuf[128];
+    uint8   reply485Buf[128];
 }_PROTEXT_T;
 PEXT _PROTEXT_T protext;
 
+#ifdef INFO_DEBUG
+typedef struct
+{
+    bool    bPrint;
+    uint8   cmdLast[16];
+    uint8   rplyLast[16];
+}_ERR_RECORD_T;
+PEXT _ERR_RECORD_T errRecord;
+#endif
 
 PEXT void RxUsart(uint8 res);
 PEXT void UsartProcess(void);
 PEXT void CommInit(void);
+PEXT void InfoErrPrint(void);
 
 
 #undef PEXT

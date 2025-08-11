@@ -19,10 +19,12 @@ typedef enum
 }bool;
 
 
+#define INFO_DEBUG
 #define A12_909_A2
 //#define A12_906_B1
 
 #include <stm32f10x.h>
+#include <stm32f10x_nvic.h>	 
 #include "sys.h"
 #include "signal.h"
 #include "usFunc.h"

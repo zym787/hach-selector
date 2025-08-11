@@ -7,8 +7,8 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                103
-#define SOFT_VS                 "V1.0.3r8"
+#define SOFT_VER                105
+#define SOFT_VS                 "V1.0.5r3"
 
 //------------------------------------------------------------------------------------------------------------
 #define ADDR_BOARD_ID           0
@@ -71,8 +71,18 @@ enum PROTOCAL
     EXT_COMM
 };
 
+typedef enum
+{
+    PR_NONE,
+    PR_INFO,
+    PR_DBG,
+    PR_ALL,
+}_PRINT_OUT_T;
+
 typedef struct
 {
+    _PRINT_OUT_T    typeInfo;
+    _PRINT_OUT_T    comInfo;
     uint8   typeProtocal;
     uint8   bdrate;
     bool    bRdPulse;
@@ -80,7 +90,9 @@ typedef struct
     bool    shiftOnece;     // 首次运行
     bool    reShift;        // 出错后重新走位
     bool    dbgStop;     // 首次运行
+    bool    bInterrupt;
     uint32  protectTimeOut;
+    bool    bEXTI;
 }_SYS_T;
 PEXT _SYS_T syspara;
 

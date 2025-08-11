@@ -22,16 +22,16 @@ bool GettCliffSignal(void)
     {// 齿片
         if(optStaLst==false)
         {
-            printd("\r\n gap %d", Valve.nowGapCnt);
+            prInfo(syspara.typeInfo, "\r\n gap %d", Valve.nowGapCnt);
             if(Valve.nowGapCnt>(sig.pulseGap[0]-sig.pulseGap[0]/3) && Valve.nowGapCnt<(sig.pulseGap[1]*2))
             {
-//                printd(" %d", Valve.nowGapCnt);
+//                prInfo(syspara.typeInfo, " %d", Valve.nowGapCnt);
                 Valve.nowGapCnt = 0;
                 bCliff = true;
             }
             else
             {
-                printd(" err %d %d %d", Valve.nowGapCnt, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
+                prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowGapCnt, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
             }
         }
     }
@@ -39,10 +39,10 @@ bool GettCliffSignal(void)
     {
         if(optStaLst==true)
         {
-            printd("\r\n block %d", Valve.nowBlockCnt);
+            prInfo(syspara.typeInfo, "\r\n block %d", Valve.nowBlockCnt);
             if(Valve.nowBlockCnt>(sig.pulseBlock[1]-sig.pulseBlock[1]/2) && Valve.nowBlockCnt<(sig.pulseBlock[0]*2))
             {
-//                printd(" %d", Valve.nowBlockCnt);
+//                prInfo(syspara.typeInfo, " %d", Valve.nowBlockCnt);
                 Valve.nowBlockCnt = 0;
                 bCliff = true;
             }
@@ -51,7 +51,7 @@ bool GettCliffSignal(void)
                 if(Valve.cntSignal)
                 {
                     Valve.status = OPT_ERR;
-                    printd(" err %d %d %d", Valve.nowBlockCnt, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
+                    prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowBlockCnt, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
                 }
                 else
                 {// 第一个由于是在半齿开始，脉冲值会小，此值不做报错
@@ -163,12 +163,13 @@ void SignalScan(void)
         case 103:
             if(!MotionStatus[AXSV])
             {
-                printd("\r\n 信号总数:%d", sig.count);
+                prInfo(syspara.typeInfo, "\r\n 信号总数:%d", sig.count);
                 if(sig.count!=24)
-                    printd("\r\n 信号总数错误");
+                    prInfo(syspara.typeInfo, "\r\n 信号总数错误");
                 VALVE_ENA = ON;
                 sig.bRdPulse = true;
-                sig.num = 0;
+                sig.blockNum = 0;
+                sig.gapNum = 0;
                 memset(sig.pulseGap, 0, sizeof(sig.pulseGap));
                 memset(sig.pulseBlock, 0, sizeof(sig.pulseBlock));
                 AxisMoveRel(AXSV, -(int)rdc.stepRound*13/12, accel[AXSV]/2, decel[AXSV]/2, speed[AXSV]/2);
@@ -181,29 +182,35 @@ void SignalScan(void)
                 sig.bRdPulse = false;
                 BubbleWord(sig.pulseGap, SIGNAL_CNT);
                 BubbleWord(sig.pulseBlock, SIGNAL_CNT);
+                prInfo(syspara.typeInfo, "\r\nG:");
                 for(i=0; i<SIGNAL_CNT; i++)
                 {
+                    prInfo(syspara.typeInfo, " %d", *(sig.pulseGap+i));
                     if(!*(sig.pulseGap+i))
                         break;
                 }
                 // 取均值
                 sig.pulseGap[i-1] = AverageN(sig.pulseGap+1, i-1);
+                
+                prInfo(syspara.typeInfo, "\r\nB:");
                 for(i=0; i<SIGNAL_CNT; i++)
                 {
+                    prInfo(syspara.typeInfo, " %d", *(sig.pulseBlock+i));
                     if(!*(sig.pulseBlock+i))
                         break;
                 }
-                // 取均值
-                sig.pulseBlock[0] = AverageN(sig.pulseBlock, i-1);
+                // 取最小值，由于多走了一点保证扫描一圈，小齿可能会扫到两次，常规齿取靠后的值
+                sig.pulseBlock[0] = sig.pulseBlock[i-3];    // AverageN(sig.pulseBlock, i-1);
                 if(sig.pulseBlock[0]<sig.pulseGap[i-1])
                 {
-                    printd("\r\n 信号反向,检查后重新上电");
+                    prInfo(syspara.typeInfo, "\r\n %d %d", sig.pulseBlock[0], sig.pulseGap[i-1]);
+                    prInfo(syspara.typeInfo, "\r\n 信号反向,检查后重新上电");
                     while(1);
                 }
                 else if(sig.pulseGap[0]<sig.pulseGap[i-1]*3/2 || sig.pulseBlock[0]<sig.pulseBlock[i-1]*3/2)
                 {
-                    printd("\r\n 扫描异常，重新扫描");
-                    printd("\r\n %d %d %d %d", sig.pulseGap[0], sig.pulseGap[i-1], sig.pulseBlock[0], sig.pulseBlock[i-1]);
+                    prInfo(syspara.typeInfo, "\r\n 扫描异常，重新扫描");
+                    prInfo(syspara.typeInfo, "\r\n %d %d %d %d", sig.pulseGap[0], sig.pulseGap[i-1], sig.pulseBlock[0], sig.pulseBlock[i-1]);
                     sig.stpScan = 100;
                     break;
                 }
@@ -216,7 +223,7 @@ void SignalScan(void)
                 rwBuff[6] = sig.pulseGap[0]>>8;
                 rwBuff[7] = sig.pulseGap[0];
 
-                printd("\r\n 常规齿 %d, 小齿%d, 常规口%d, 大口%d",
+                prInfo(syspara.typeInfo, "\r\n 常规齿 %d, 小齿%d, 常规口%d, 大口%d",
                 sig.pulseBlock[0], sig.pulseBlock[i-1], sig.pulseGap[i-1], sig.pulseGap[0]);
                 I2CPageWrite_Nbytes(ADDR_SYMBOL, LEN_SYMBOL, rwBuff);
                 sig.stpScan = 1;

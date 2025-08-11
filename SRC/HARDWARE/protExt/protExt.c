@@ -16,6 +16,7 @@ void CommInit(void)
     	delay_ms(100);
     	Usart3_Init(36, BAUD_RATE_19200);	            // 串口2 485初始化为19200
     	delay_ms(100);
+        prInfo(PR_INFO, "\r\n baud 19200");
     }
     else
     {
@@ -23,6 +24,7 @@ void CommInit(void)
     	delay_ms(100);
     	Usart3_Init(36, BAUD_RATE_9600);	        // 串口2 485初始化为9600
     	delay_ms(100);
+        prInfo(PR_INFO, "\r\n baud 9600");
     }
 	delay_ms(100);
 }
@@ -44,7 +46,7 @@ void ERR_Reset(void)
 	protext.rxCount = 0;
 	protext.stepCnt = PROTOCOL_HEAD;
 	protext.f_RxErr = 2;
-    printd("\r\n Err");
+//    prInfo(syspara.typeInfo, "\r\n Err");
 }
 
 
@@ -179,27 +181,38 @@ uint8 CommCheckSum(uint32 lenth, uint8 *sendbuf)
 */
 void CommSend(uint32 length, uint8 *sendbuf)
 {
-	uint16 cnt;
-    uint8 temp;
-	if(length)
-	{
-		for(cnt=0; cnt<length; cnt++)
-		{
-			temp = *(sendbuf+cnt);
-			Usart2_SendB(temp);
-		}
-	}
+	unsigned char cnt;
+
 	TX_EN();
 	if(length)
 	{
-		for(cnt=0; cnt<length; cnt++)
+		for(cnt=0; cnt < length; cnt++)
 		{
-			temp = *(sendbuf+cnt);
-			Usart3_SendB(temp);
+			while((USART3->SR&0X40)==0);        //等待发送结束
+			USART3->DR = *(sendbuf+cnt);
 		}
 	}
-    RX_EN();
+	while((USART3->SR&0X40)==0);                //等待发送结束
+	RX_EN();
+
+	if(length)
+	{
+		for(cnt=0; cnt < length; cnt++)
+		{
+			while((USART2->SR&0X40)==0);        //等待发送结束
+			USART2->DR = *(sendbuf+cnt);
+		}
+	}
+	while((USART2->SR&0X40)==0);                //等待发送结束
 }
+
+/*
+*/
+//void CommSend485(uint32 length, uint8 *sendbuf)
+//{
+//	uint16 cnt;
+//    uint8 temp;
+//}
 
 /*
 */
@@ -216,7 +229,7 @@ void AskStaProcess(uint32 sta8)
         case SHIFT_NML:
         case SHIFT_DE:
         case SHIFT_IN:
-            if(Valve.status==VALVE_RUN_END && !Valve.bErrRetn)
+            if(!MotionStatus[AXSV] && Valve.status==VALVE_RUN_END && !Valve.bErrRetn)
             {
                 protext.replyBuf[2] = 0x00;
                 protext.replyBuf[3] = 0x00;
@@ -225,7 +238,9 @@ void AskStaProcess(uint32 sta8)
             }
             else
             {
+                #ifndef INFO_DEBUG
                 Valve.bErrRetn = 0;
+                #endif
                 protext.replyBuf[2] = 0x00;
                 protext.replyBuf[3] = 0x00;
                 protext.replyBuf[4] = 0x00;
@@ -285,7 +300,24 @@ void AskStaProcess(uint32 sta8)
     checkSum = CommCheckSum(sdLen-1, protext.replyBuf);	// 获取CRC
     protext.replyBuf[sdLen-1] = checkSum;
 
-    CommSend(sdLen,protext.replyBuf);
+    CommSend(sdLen, protext.replyBuf);
+    
+    prInfo(syspara.comInfo, "\r\n s:");
+    for(uint8 i=0; i<sdLen; i++)
+    {
+        prInfo(syspara.comInfo, " %02x", protext.replyBuf[i]);
+//        #ifdef INFO_DEBUG
+//        if((Valve.status==VALVE_ERR && errRecord.bPrint==false)||Valve.bErrRetn)
+//        {
+//            errRecord.rplyLast[i] = protext.replyBuf[i];
+//            if(i==REPLY_LENS-1)
+//            {
+//                errRecord.bPrint = true;
+//                Valve.bErrRetn = 0;
+//            }
+//        }
+//        #endif
+    }
 }
 
 
@@ -421,7 +453,7 @@ void WRAction(void)
 	Valve.SnCode[3] = protext.usartBuf[6];  			// 补偿值
 	Valve.SnCode[4] = 0X00;  			            // 补偿值
     I2CPageWrite_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
-    printd("\r\n WR SN");
+    prInfo(syspara.typeInfo, "\r\n WR SN");
 }
 
 /*
@@ -430,7 +462,7 @@ void WRAction(void)
 void RDAction(void)
 {
     I2CPageRead_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
-    printd("\r\n RD SN");
+    prInfo(syspara.typeInfo, "\r\n RD SN");
 }
 
 /*
@@ -455,9 +487,15 @@ void ProtocalSet(void)
 	{//usart4通讯处理
 		if(protext.rxCount != 0)
 		{
-    	    printd("\r\n rcv:");
+    	    prInfo(syspara.comInfo, "\r\n r:");
             for(i=0; i<protext.rxCount; i++)
-        	    printd(" %02x", protext.usartBuf[i]);
+        	{
+                prInfo(syspara.comInfo, " %02x", protext.usartBuf[i]);
+                #ifdef INFO_DEBUG
+                if(errRecord.bPrint==false)
+                    errRecord.cmdLast[i] = protext.usartBuf[i];
+                #endif
+            }
 			if(CommCheckSum(RECEIVE_LENS-1, protext.usartBuf)==protext.usartBuf[RECEIVE_LENS-1])		//CRC校验成功
 			{
                 switch(P_COMMAND)
@@ -498,5 +536,31 @@ void ProtocalSet(void)
 }
 
 
-
+void InfoErrPrint(void)
+ {
+    #ifdef INFO_DEBUG
+    if(errRecord.bPrint==true)
+    {
+        errRecord.bPrint = false;
+//        if(syspara.typeProtocal==MY_MODBUS)
+//        {
+//            printd("\r\n");
+//            for(uint8 i=0; i<5; i++)
+//                printd(" %02x", *(errRecord.cmdLast+i));
+//            printd("\r\n");
+//            for(uint8 i=0; i<12; i++)
+//                printd(" %02x", *(errRecord.rplyLast+i));
+//        }
+//        else
+        {
+            printd("\r\n");
+            for(uint8 i=0; i<RECEIVE_LENS; i++)
+                printd(" %02x", *(errRecord.cmdLast+i));
+            printd("\r\n");
+            for(uint8 i=0; i<REPLY_LENS; i++)
+                printd(" %02x", *(errRecord.rplyLast+i));
+        }
+    }
+    #endif
+}
 

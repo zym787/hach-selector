@@ -17,9 +17,10 @@
 #define LV_NA                   0
 #define LV_INFO                 1
 #define LV_DBG                  2
+#define LV_ALL                  3
 #define	printd(fmt, ...)		printf(fmt, ##__VA_ARGS__)
-#define prInfo(lv,fmt, ...)     do{if(lv>=LV_INFO) printf(fmt, ##__VA_ARGS__);}while(0)
-#define prDbg(lv,fmt, ...)      do{if(lv>=LV_DBG) printf(fmt, ##__VA_ARGS__);}while(0)
+#define prInfo(lv,fmt, ...)     do{if(lv==LV_INFO||lv==LV_ALL) printf(fmt, ##__VA_ARGS__);}while(0)
+#define prDbg(lv,fmt, ...)      do{if(lv==LV_DBG||lv==LV_ALL) printf(fmt, ##__VA_ARGS__);}while(0)
 #else
 #define printd(...)
 #endif

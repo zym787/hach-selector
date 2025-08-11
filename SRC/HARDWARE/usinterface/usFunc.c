@@ -12,7 +12,7 @@ void (*FuncPtr)(char rw);          //函数功能指针
 */
 void TermNone(char rw)
 {
-     printd("\r\n Command \"%s\" invalid!", str.rcvStr);
+     prInfo(syspara.typeInfo, "\r\n Command \"%s\" invalid!", str.rcvStr);
 }
 
 
@@ -24,14 +24,30 @@ void TermVR(char rw)
     int getInt;
     if(rw==READ_ACT)
     {
-        printd("\r\n %s", SOFT_VS);
+        prInfo(syspara.typeInfo, "\r\n %s", SOFT_VS);
     }
     else
     {
         unsigned char ret = FetchInt(2, 0,str.rcvStr, &getInt);
-        if(!ret)
+        if(ret)
         {
-            str.fUsIRF = getInt;
+            return;
+        }
+        switch(getInt)
+        {
+            case 0:
+                syspara.typeInfo = PR_NONE;
+                break;
+            case 1:
+                syspara.typeInfo = PR_INFO;
+                break;
+            case 2:
+                syspara.typeInfo = PR_DBG;
+                break;
+            case 3:
+                syspara.typeInfo = PR_ALL;
+                break;
+
         }
     }
 }
@@ -42,7 +58,7 @@ void TermVR(char rw)
 */
 void TermList(char rw)
 {
-    printd("\r\n %s", S_LIST_M);
+    prInfo(syspara.typeInfo, "\r\n %s", S_LIST_M);
  }
 
 
@@ -58,14 +74,14 @@ void TermMap(char rw)
     memset(getChar, 0, sizeof(getChar));
     if(rw==READ_ACT)
     {
-        printd("\r\n No para");
+        prInfo(syspara.typeInfo, "\r\n No para");
     }
     else
     {
         unsigned char ret = FetchChar(3, 0, str.rcvStr, *getChar);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         getAddr = (int *)strtohex(*getChar);
@@ -73,12 +89,12 @@ void TermMap(char rw)
         {//判断是否有参数写入
             getInt = str2int(*(getChar+1));
             *getAddr = getInt;
-            printd("\r\n Wr 0x%08x to 0x%08x", getInt, getAddr);
+            prInfo(syspara.typeInfo, "\r\n Wr 0x%08x to 0x%08x", getInt, getAddr);
         }
         else
         {//无参数，取指
             getInt = (int)(*getAddr);
-            printd("\r\n Rd 0x[%02x %02x %02x %02x] from 0x%08x",
+            prInfo(syspara.typeInfo, "\r\n Rd 0x[%02x %02x %02x %02x] from 0x%08x",
                 (char)(getInt>>24), (char)(getInt>>16), (char)(getInt>>8), (char)(getInt>>0), getAddr);
         }
     }
@@ -92,7 +108,7 @@ void TermIIC(char rw)
 {
     if(rw==READ_ACT)
     {
-        printd("\r\n No para");
+        prInfo(syspara.typeInfo, "\r\n No para");
     }
     else
     {
@@ -103,7 +119,7 @@ void TermIIC(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n ERR%d", ret);
+            prInfo(syspara.typeInfo, "\r\n ERR%d", ret);
             return;
         }
         if(getInt)
@@ -111,22 +127,22 @@ void TermIIC(char rw)
             *(rwBuf+0) = getInt>>8;
             *(rwBuf+1) = getInt;
             I2CPageWrite_Nbytes(0, 2, rwBuf);
-            printd("\r\n I2C write 0x%02x 0x%02x", *(rwBuf+0), *(rwBuf+1));
+            prInfo(syspara.typeInfo, "\r\n I2C write 0x%02x 0x%02x", *(rwBuf+0), *(rwBuf+1));
             *(rwBuf+2) = 0;
             *(rwBuf+3) = 0;
             I2CPageRead_Nbytes(0, 2, rwBuf+2);
-            printd("\r\n I2C read 0x%02x 0x%02x", *(rwBuf+2), *(rwBuf+3));
+            prInfo(syspara.typeInfo, "\r\n I2C read 0x%02x 0x%02x", *(rwBuf+2), *(rwBuf+3));
             if(*(rwBuf+0)==*(rwBuf+2) && *(rwBuf+1)==*(rwBuf+3))
-                printd("\r\n I2C R/W Succeed!");
+                prInfo(syspara.typeInfo, "\r\n I2C R/W Succeed!");
             else
-                printd("\r\n I2C R/W Fail!");
+                prInfo(syspara.typeInfo, "\r\n I2C R/W Fail!");
         }
         else
         {
             *(rwBuf+0) = 0;
             *(rwBuf+1) = 0;
             I2CPageWrite_Nbytes(ADDR_BOARD_ID, LEN_BOARD_ID, rwBuf);
-            printd("\r\n Clear store id!");
+            prInfo(syspara.typeInfo, "\r\n Clear store id!");
         }
         #else
         unsigned short rwBuf[4]={0, 0, 0, 0};
@@ -134,7 +150,7 @@ void TermIIC(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n ERR%d", ret);
+            prInfo(syspara.typeInfo, "\r\n ERR%d", ret);
             return;
         }
         if(getInt)
@@ -142,22 +158,22 @@ void TermIIC(char rw)
             *(rwBuf+0) = getInt>>16;
             *(rwBuf+1) = getInt;
             STMFLASH_Write(FLASH_SAVE_ADDR, rwBuf, 2);
-            printd("\r\n write 0x%04x 0x%04x", *(rwBuf+0), *(rwBuf+1));
+            prInfo(syspara.typeInfo, "\r\n write 0x%04x 0x%04x", *(rwBuf+0), *(rwBuf+1));
             *(rwBuf+2) = 0;
             *(rwBuf+3) = 0;
             STMFLASH_Read(FLASH_SAVE_ADDR, rwBuf+2, 2);
-            printd("\r\n read 0x%04x 0x%04x", *(rwBuf+2), *(rwBuf+3));
+            prInfo(syspara.typeInfo, "\r\n read 0x%04x 0x%04x", *(rwBuf+2), *(rwBuf+3));
             if(*(rwBuf+0)==*(rwBuf+2) && *(rwBuf+1)==*(rwBuf+3))
-                printd("\r\n R/W Succeed!");
+                prInfo(syspara.typeInfo, "\r\n R/W Succeed!");
             else
-                printd("\r\n R/W Fail!");
+                prInfo(syspara.typeInfo, "\r\n R/W Fail!");
         }
         else
         {
             *(rwBuf+0) = 0;
             *(rwBuf+1) = 0;
             STMFLASH_Read(ADDR_FLASH_ID, rwBuf, LEN_FLASH_ID);
-            printd("\r\n Factory set!");
+            prInfo(syspara.typeInfo, "\r\n Factory set!");
         }
         #endif
     }
@@ -169,15 +185,15 @@ void TermCat(char rw)
     int getInt[2] = {0, 0};
     if(rw==READ_ACT)
     {
-        printd("\r\n Cat comm");
+        prInfo(syspara.typeInfo, "\r\n Cat comm");
     }
     else
     {
         unsigned char ret = FetchInt(3, 0, str.rcvStr, getInt);
-        printd("\r\n Cat %d %d", *(getInt+0), *(getInt+1));
+        prInfo(syspara.typeInfo, "\r\n Cat %d %d", *(getInt+0), *(getInt+1));
        if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         switch(*(getInt+0))
@@ -206,17 +222,17 @@ void TermFetch(char rw)
     int getInt[2] = {0, 0};
     if(rw==READ_ACT)
     {
-        printd("\r\n Cat comm");
+        prInfo(syspara.typeInfo, "\r\n Cat comm");
     }
     else
     {
         unsigned char ret = FetchInt(3, 2, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
-        printd("\r\n Fet %d %d", *(getInt+0), *(getInt+1));
+        prInfo(syspara.typeInfo, "\r\n Fet %d %d", *(getInt+0), *(getInt+1));
         switch(*(getInt+0))
         {
             case 1:
@@ -247,22 +263,22 @@ void TermTs(char rw)
 //    uint8 buffer[2]={0,0};
     if(rw == READ_ACT)
     {
-        printd("%s", S_LIST_SH);
-        printd("%s", S_LIST_SBD);
-        printd("%s", S_LIST_SE);
+        prInfo(syspara.typeInfo, "%s", S_LIST_SH);
+        prInfo(syspara.typeInfo, "%s", S_LIST_SBD);
+        prInfo(syspara.typeInfo, "%s", S_LIST_SE);
     }
     else
     {
         unsigned char ret = FetchInt(2, 0, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         switch(getInt[0])
         {
             case 0:
-                printd("\r\n Move axis %d rounds", getInt[1]);
+                prInfo(syspara.typeInfo, "\r\n Move axis %d rounds", getInt[1]);
                 if(!MotionStatus[AXSV])
                     AxisMoveRel(AXSV, -rdc.stepRound*getInt[1], accel[AXSV], decel[AXSV], speed[AXSV]);
                 break;
@@ -273,7 +289,7 @@ void TermTs(char rw)
                 if(getInt[1]<=64)
                 {
                     ModbusPara.mAddrs = getInt[1];
-                    printd("\r\n Set addrs %d", getInt[1]);
+                    prInfo(syspara.typeInfo, "\r\n Set addrs %d", getInt[1]);
                     I2CPageWrite_Nbytes(ADDR_MODULE_NUM, LEN_MODULE_NUM, (uint8 *)&getInt[1]);
                 }
                 break;
@@ -299,12 +315,12 @@ void TermPos(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         if(Valve.status==VALVE_RUN_END && !MotionStatus[AXSV])
         {
-            printd("\r\n %d==>%d", Valve.portCur, getInt[0]);
+            prInfo(syspara.typeInfo, "\r\n %d==>%d", Valve.portCur, getInt[0]);
             Valve.portDes = getInt[0];
             Valve.dir = getInt[1];
             syspara.protectTimeOut = 0;
@@ -323,19 +339,19 @@ void TermFixO(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
-        printd("\r\n FixO:%d", Valve.fixOrg);
+        prInfo(syspara.typeInfo, "\r\n FixO:%d", Valve.fixOrg);
     }
     else
     {
         unsigned char ret = FetchInt(4, 0, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         Valve.fixOrg = getInt[0];
         I2CPageWrite_Nbytes(ADDR_VALVE_FIX, LEN_VALVE_FIX, &Valve.fixOrg);
-        printd("\r\n set FixO:%d", Valve.fixOrg);
+        prInfo(syspara.typeInfo, "\r\n set FixO:%d", Valve.fixOrg);
     }
 }
 
@@ -348,19 +364,19 @@ void TermFixD(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
-        printd("\r\n Dir:%d", valveFix.fix.dirGap);
+        prInfo(syspara.typeInfo, "\r\n Dir:%d", valveFix.fix.dirGap);
     }
     else
     {
         unsigned char ret = FetchInt(4, 0, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         valveFix.fix.dirGap = getInt[0];
         I2CPageWrite_Nbytes(ADDR_DIR_FIX, LEN_DIR_FIX, &valveFix.fix.dirGap);
-        printd("\r\n set Dir:%d", valveFix.fix.dirGap);
+        prInfo(syspara.typeInfo, "\r\n set Dir:%d", valveFix.fix.dirGap);
     }
 }
 
@@ -375,17 +391,17 @@ void TermAddr(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_MODULE_NUM, LEN_MODULE_NUM, (uint8*)&getInt);
-        printd("\r\n Addr:%d", getInt);
+        prInfo(syspara.typeInfo, "\r\n Addr:%d", getInt);
     }
     else
     {
         unsigned char ret = FetchInt(4, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
-        if(getInt<=64)
+        if(getInt<=64||getInt==255)
         {
             I2CPageWrite_Nbytes(ADDR_MODULE_NUM, LEN_MODULE_NUM, (uint8*)&getInt);
             ModbusPara.mAddrs = getInt;
@@ -408,12 +424,12 @@ void TermInt(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         if(getInt&&getInt<=255)
         {
-            printd("\r\n set INT to %d", getInt);
+            prInfo(syspara.typeInfo, "\r\n set INT to %d", getInt);
             intCtrl = getInt;
             I2CPageWrite_Nbytes(ADDR_INTVL, LEN_INTVL, &intCtrl);
         }
@@ -429,19 +445,19 @@ void TermSpd(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_SPD, LEN_SPD, &Valve.spd);
-        printd("\r\n read Spd %d", Valve.spd);
+        prInfo(syspara.typeInfo, "\r\n read Spd %d", Valve.spd);
     }
     else
     {
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         if(getInt&&getInt<=100)
         {
-            printd("\r\n set Spd to %d", getInt);
+            prInfo(syspara.typeInfo, "\r\n set Spd to %d", getInt);
             I2CPageWrite_Nbytes(ADDR_SPD, LEN_SPD, (uint8*)&getInt);
         }
     }
@@ -457,9 +473,9 @@ void TermSN(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_SN, LEN_SN, Valve.SnCode);
-        printd("\r\n read sn:");
+        prInfo(syspara.typeInfo, "\r\n read sn:");
         for(uint8 i=0; i<10; i++)
-            printd(" %02x", Valve.SnCode[i]);
+            prInfo(syspara.typeInfo, " %02x", Valve.SnCode[i]);
 
     }
     else
@@ -467,11 +483,11 @@ void TermSN(char rw)
         unsigned char ret = FetchInt(2, 0, str.rcvStr, getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
 
-        printd("\r\n set sn code");
+        prInfo(syspara.typeInfo, "\r\n set sn code");
         I2CPageWrite_Nbytes(ADDR_SN, LEN_SN, (uint8*)getInt);
     }
 }
@@ -487,15 +503,15 @@ void TermProtocal(char rw)
         I2CPageRead_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &syspara.typeProtocal);
         if(getInt==MY_MODBUS || getInt==EXT_COMM)
         {
-            printd("\r\n now protocal is");
+            prInfo(syspara.typeInfo, "\r\n now protocal is");
             if(syspara.typeProtocal==MY_MODBUS)
-                printd("\r\n MODBUS");
+                prInfo(syspara.typeInfo, "\r\n MODBUS");
             else
-                printd("\r\n EXT PROTCAL");
+                prInfo(syspara.typeInfo, "\r\n EXT PROTCAL");
         }
         else
         {
-            printd("\r\n read wrong type");
+            prInfo(syspara.typeInfo, "\r\n read wrong type");
         }
     }
     else
@@ -503,22 +519,22 @@ void TermProtocal(char rw)
         unsigned char ret = FetchInt(5, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         if(getInt==MY_MODBUS || getInt==EXT_COMM)
         {
             syspara.typeProtocal = getInt;
-            printd("\r\n set protocal to");
+            prInfo(syspara.typeInfo, "\r\n set protocal to");
             if(syspara.typeProtocal==MY_MODBUS)
-                printd("\r\n MODBUS");
+                prInfo(syspara.typeInfo, "\r\n MODBUS");
             else
-                printd("\r\n EXT PROTCAL");
+                prInfo(syspara.typeInfo, "\r\n EXT PROTCAL");
             I2CPageWrite_Nbytes(ADDR_PROTOCAL, LEN_PROTOCAL, &syspara.typeProtocal);
         }
         else
         {
-            printd("\r\n wrong type");
+            prInfo(syspara.typeInfo, "\r\n wrong type");
         }
     }
 }
@@ -539,22 +555,22 @@ void TermBaud(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r\n Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r\n Err code %d", ret);
             return;
         }
         if(getInt%9600)
         {
-            printd("\r\n baud rate %d not exist", getInt);
+            prInfo(syspara.typeInfo, "\r\n baud rate %d not exist", getInt);
             return;
         }
         if(getInt==9600)
         {
-            printd("\r\n set baud rate to %d", getInt);
+            prInfo(syspara.typeInfo, "\r\n set baud rate to %d", getInt);
             syspara.bdrate = 1;
         }
         else if(getInt==19200)
         {
-            printd("\r\n set baud rate to %d", getInt);
+            prInfo(syspara.typeInfo, "\r\n set baud rate to %d", getInt);
             syspara.bdrate = 2;
         }
         I2CPageWrite_Nbytes(ADDR_BAUD, LEN_BAUD, &syspara.bdrate);
@@ -586,12 +602,13 @@ void TermScan(char rw)
         if(!MotionStatus[AXSV])
         {
             sig.stpScan = 100;
-            sig.num = 0;
-            printd("\r\n 开始扫描");
+            sig.blockNum = 0;
+            sig.gapNum = 0;
+            prInfo(syspara.typeInfo, "\r\n 开始扫描");
         }
         else
         {
-            printd("\r\n 电机繁忙，命令未执行");
+            prInfo(syspara.typeInfo, "\r\n 电机繁忙，命令未执行");
         }
     }
 }
@@ -607,17 +624,17 @@ void TermRDCR(char rw)
     if(rw == READ_ACT)
     {
         I2CPageRead_Nbytes(ADDR_RDC_RATE, LEN_RDC_RATE, &rdc.rate);
-        printd("\r\n read rate %d", rdc.rate);
+        prInfo(syspara.typeInfo, "\r\n read rate %d", rdc.rate);
     }
     else
     {
         unsigned char ret = FetchInt(4, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r Err code %d", ret);
             return;
         }
-        printd("\r\n set rate %d", getInt);
+        prInfo(syspara.typeInfo, "\r\n set rate %d", getInt);
         rdc.rate = getInt;
         I2CPageWrite_Nbytes(ADDR_RDC_RATE, LEN_RDC_RATE, &rdc.rate);
     }
@@ -634,12 +651,12 @@ void TermCnt(char rw)
         unsigned char ret = FetchInt(3, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r Err code %d", ret);
             return;
         }
         valveFix.fix.portCnt = getInt;
         I2CPageWrite_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
-        printd("\r\n portCnt%d", valveFix.fix.portCnt);
+        prInfo(syspara.typeInfo, "\r\n portCnt%d", valveFix.fix.portCnt);
     }
 }
 
@@ -654,17 +671,17 @@ void TermHalf(char rw)
         unsigned char ret = FetchInt(4, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r Err code %d", ret);
             return;
         }
-        printd("\r\n set half %d", getInt);
+        prInfo(syspara.typeInfo, "\r\n set half %d", getInt);
         Valve.bHalfSeal = getInt;
         I2CPageWrite_Nbytes(ADDR_HALF_SEAL, LEN_HALF_SEAL, &Valve.bHalfSeal);
     }
     else
     {
         I2CPageRead_Nbytes(ADDR_HALF_SEAL, LEN_HALF_SEAL, &Valve.bHalfSeal);
-        printd("\r\n read half %d", Valve.bHalfSeal);
+        prInfo(syspara.typeInfo, "\r\n read half %d", Valve.bHalfSeal);
     }
 }
 
@@ -680,13 +697,13 @@ void TermMotor(char rw)
         unsigned char ret = FetchInt(5, 0, str.rcvStr, &getInt);
         if(ret)
         {
-            printd("\r Err code %d", ret);
+            prInfo(syspara.typeInfo, "\r Err code %d", ret);
             return;
         }
         getInt *= rdc.stepP1dgr;
         if(!MotionStatus[AXSV])
             AxisMoveAbs(AXSV, getInt, accel[AXSV], decel[AXSV], speed[AXSV]);
-        printd("\r\n motor %d", getInt);
+        prInfo(syspara.typeInfo, "\r\n motor %d", getInt);
     }
 }
 

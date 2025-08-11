@@ -8,6 +8,8 @@
 #endif
 
 #define DEBUG_MODBUS                0
+#define	RX_EN()		(PBout(1)=0)
+#define	TX_EN()		(PBout(1)=1)
 
 //======================  参数宏定义=================================
 #define MAX_ADDR                    1
