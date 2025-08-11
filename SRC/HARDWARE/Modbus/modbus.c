@@ -289,11 +289,13 @@ void MB_ReadHoldingRegisters(void)
 
     			if(ModbusPara.tBuf[0] != MB_Broadcast_ADDR)
                    ModbusSend(byteCount);
+                #ifndef SKIPDBG
                 prInfo(syspara.comInfo, "\r\n s:");
                 for(uint8 i=0; i<byteCount; i++)
                 {
                     prInfo(syspara.comInfo, " %02x", ModbusPara.tBuf[i]);
                 }
+                #endif
     		}
     		else
     		{// 超出系统规定保持寄存器地址范围或者读取个数与起始地址不匹配溢出
@@ -536,13 +538,14 @@ void ModbusProces(void)
             LED_WORK = !LED_WORK;
     		if(ModbusCRC16(&ModbusPara.rBuf[0], ModbusPara.rCnt)==0)
     		{
+                #ifndef SKIPDBG
                 uint32 i=0;
                 prInfo(syspara.comInfo, "\r\n r:");
                 for(i=0; i<ModbusPara.rCnt; i++)
                 {
                     prInfo(syspara.comInfo, " %02x", ModbusPara.rBuf[i]);
                 }
-
+                #endif
     			{
                 //确认模块存在并且工作正常
 				switch(ModbusPara.rBuf[1])

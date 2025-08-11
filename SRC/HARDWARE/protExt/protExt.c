@@ -37,12 +37,6 @@ void RxDataProcessEnd(void)
     protext.rxCount = 0;
     protext.rxTimeOn = 0;
     protext.rxTimeCnt = 0;
-//    #ifdef EN_UART3_TX
-//    Usart2InterruptEnable();
-//    Usart3InterruptEnable();
-//    protext.send232Cnt = 0;
-//    protext.send485Cnt = 0;
-//    #endif
 }
 
 /*
@@ -222,12 +216,13 @@ void AskStaProcess(uint32 sta8)
     protext.sendCnt =  REPLY_LENS;
     checkSum = CommCheckSum(sdLen-1, protext.replyBuf);	// 获取CRC
     protext.replyBuf[sdLen-1] = checkSum;
-
+    #ifndef SKIPDBG
     prInfo(syspara.comInfo, "\r\n s:");
     for(uint8 i=0; i<sdLen; i++)
     {
         prInfo(syspara.comInfo, " %02x", protext.replyBuf[i]);
     }
+    #endif
     TX_EN();
     MYDMA_Transmit_Enable(USART3, DMA1_Channel2, REPLY_LENS);
     MYDMA_Transmit_Enable(USART2, DMA1_Channel7, REPLY_LENS);
@@ -396,13 +391,13 @@ void ProtocalSet(void)
 */
  void UsartProcess(void)
 {
-    unsigned char i=0;
 	if(protext.stepCnt==PROTOCOL_OK)
 	{//usart4通讯处理
 		if(protext.rxCount!=0)
 		{
+            #ifndef SKIPDBG
     	    prInfo(syspara.comInfo, "\r\n r:");
-            for(i=0; i<protext.rxCount; i++)
+            for(uint8 i=0; i<protext.rxCount; i++)
         	{
                 prInfo(syspara.comInfo, " %02x", protext.usartBuf[i]);
                 #ifdef INFO_DEBUG
@@ -410,6 +405,7 @@ void ProtocalSet(void)
                     errRecord.cmdLast[i] = protext.usartBuf[i];
                 #endif
             }
+            #endif
 			if(CommCheckSum(RECEIVE_LENS-1, protext.usartBuf)==protext.usartBuf[RECEIVE_LENS-1])		//CRC校验成功
 			{
                 switch(P_COMMAND)

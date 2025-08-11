@@ -196,8 +196,8 @@ void ParameterInit(void)
     syspara.pwrOn = true;
     syspara.reShift = false;
     Valve.bHalfDo = 0;
-    syspara.typeInfo = PR_INFO;
-    syspara.comInfo = PR_INFO;
+    syspara.typeInfo = PR_NONE;
+    syspara.comInfo = PR_NONE;
 }
 
 
