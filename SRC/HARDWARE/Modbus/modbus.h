@@ -1,0 +1,154 @@
+#ifndef _MODBUS_H_
+#define _MODBUS_H_
+
+#ifdef _MODBUS_GLOBALS_
+#define PEXT
+#else
+#define PEXT extern
+#endif
+
+#define DEBUG_MODBUS                0
+
+//======================  参数宏定义=================================
+#define MAX_ADDR                    1
+#define	MB_SALVE_DEF_ADDR           1
+//---- 本机支持MODBUS功能代码-------------------------------------------------
+#define CHECK_COIL_bSTATUS			1 		//  读输出位状态
+#define GET_INPUT_bSTATUS			2 		//  读输入位状态
+#define GET_HOLDING_REGT			3		//  读保持寄存器
+#define GET_INPUT_REGT				4		//  读输入寄存器
+#define SET_COIL_SINGLE				5		//  强置单线圈
+#define PRESET_HOLDING_sREGT		6		//  预置单个保持寄存器
+#define SET_COIL_MULTIPLE			15		//  强制多个位输出
+#define PRESET_HOLDING_mREGT		16		//  预置多个保持寄存器
+#define EXTERN_FUNC			        0x52    //  扩展功能
+//---- 不正常的代码值-------------------------------------------------
+#define ERR_NOT						0
+#define ERR_MB_FUN					1		// 不合法功能代码
+#define ERR_MB_ADDR					2		// 不合法数据地址
+#define ERR_MB_DATA					3		// 不合法数据，超出某功能的极限值
+#define ERR_MB_DEVICE				4		// 主模式响应超出等待时间；从模式设备地址出错；包括字符间隔时间 超过1.5个字符
+//---- 通信时间参数-------------------------------------------------
+#define ONE_DATA_BIT				10		// 采用方式1:10bit
+#define BAUD_RATE_9600			    9600L	// MODBUS波特列
+#define BAUD_RATE_19200			    19200L	// MODBUS波特列
+#define BAUD_RATE_MODBUS			19200L	// MODBUS波特列
+//每个bit的时间为1/BR，每个字节为8位+停止位+校验位=10位，则每个字节耗时10/BR，半字节为5/BR，转般为us乘以1000000
+#define MODBUS_TIME_9600			(520)		// 520uS=(10/9600)/2
+#define MODBUS_TIME_19200			(260)		// 260uS=(10/19200)/2
+#define MODBUS_TIME					(10*1000000/BAUD_RATE_MODBUS/2)		// 260uS=(10/19200)/2
+#define BUS_IDLE_TIME				10		// 帧空闲(开始或结束)超过3.5~4个接收字符时间
+#define FRAME_ERR_TIME				4		// 数据接收超时,接收字符之间 超过1.5~2个接收字符时间
+#define NO_RESPONSE_TIME			500		// 通讯中断超时 约500*MODBUS_TIME
+#define NO_RESPONSE_TIME_BC			500		// 通讯中断超时 约500*MODBUS_TIME
+//---- 通信状态参数-------------------------------------------------
+#define MB_IDEL						0X00	// 总线空闲、结束帧、起始帧
+#define MB_WAIT_HOST				0X01	// 主设备等待响应
+#define MB_BUSY						0X50	// 总线忙
+#define MB_RECIVE					0X51	// 总线接收
+#define MB_SEND						0X52	// 总线发送
+#define MB_RECIVE_END				0X53	// 总线发送
+#define MB_NO_RESPONSE				0X54	// 主模式响应的当前查询的设备，从模式设备地址出错
+#define MB_RECIVE_ERR				0X55	// 总线接收过程有出错
+//---- 通信地址参数，此处少改?-------------------------------------------------
+#define MB_Broadcast_ADDR			0xaa	// 广播地址
+
+#define MB_MAX_ADDR					128		// 模块最大地址
+
+#define MB_REPEAT					2		// 数据传输出错，后重新处理的次数
+#define MB_ADDR_ERR_FLAG			0xFF	// 地址错误，无效标记
+#define MB_ADDR_NULL				0xFF	// 模块不存在
+
+//=====================函数和变量声明=============================
+//协议传输变量
+#define LENGTH_MB_DATA				140	    // 11*12 +4*2
+#define LENGTH_MB_PARA				288	    // 140*2+8
+#define LEAST_RCV_CNT               3       // 最小接收字节数
+typedef struct
+{
+	unsigned char 	sRUN;					// 总线运行状态
+	unsigned char 	sERR;					// 总线出错状态
+	unsigned char 	rCnt;					// 总线接收计数
+	unsigned char 	HostRept;				// 作为主设备的重复次数
+	unsigned short 	times;					// 总线计时1
+	unsigned char	mAddrs;					// 设备地址
+	unsigned char	res;				    // 保留---凑2的倍数
+	unsigned char	rBuf[LENGTH_MB_DATA];	// 待解析的接收数据
+	unsigned char	tBuf[LENGTH_MB_DATA];	// 待发送数据
+}_MB_PRAR_T;
+
+
+//线圈变量
+#define SUM_COIL_BIT				64		// 线圈的位个数
+#define LENGTH_COIL_REG			    SUM_COIL_BIT/8
+
+//离散量输入变量
+#define SUM_DiscreteREG_BIT			32		// 离散量的位个数
+#define LENGTH_DiscreteREG			SUM_DiscreteREG_BIT	/8
+
+//保持寄存器变量
+#define SUM_HoldingREG_WORD		    120		// 保持寄存器的个数
+#define LENGTH_HoldingREG			SUM_HoldingREG_WORD*2
+
+//输入寄存器变量
+#define SUM_InputREG_WORD			20		// 保持寄存器的个数
+#define LENGTH_InputREG				SUM_HoldingREG_WORD*2
+
+//用户定义各个变量、寄存器的使用功能
+#define COIL_NUM01				    0
+#define DisREG_NUM01			    (COIL_NUM01 + SUM_COIL_BIT)
+#define HoldingREG01				0
+#define InputREG01				    (HoldingREG01 + SUM_HoldingREG_WORD)
+
+//HMI的通讯字地址分配
+// 保持寄存器
+#define 	HMI_hREG01_BasePic			0							// 画面地址
+#define 	HMI_hREG02_CMD				1							// 控制命令地址
+
+// 输入寄存器
+
+// HMI的通讯位地址分配
+// 线圈变量: 0~15it
+#define	HMI_COIL_BIT0		0x01	//
+#define	HMI_COIL_BIT1		0x02	//
+#define	HMI_COIL_BIT2		0x04	//
+#define	HMI_COIL_BIT3		0x08	//
+#define	HMI_COIL_BIT4		0x10	//
+#define	HMI_COIL_BIT5		0x20	//
+#define	HMI_COIL_BIT6		0x40	//
+#define	HMI_COIL_BIT7		0x80	//
+
+//离散输入变量:16~71 bit : 16~23 [0]  24`31[1] 32~39 [2] 40~47 [3] 48~55 [4] 56~63 [5] 64~71 [6]
+#define	HMI_DisIN_BIT0		0x01	//
+#define	HMI_DisIN_BIT1		0x02	//
+#define	HMI_DisIN_BIT2		0x04	//
+#define	HMI_DisIN_BIT3		0x08	//
+#define	HMI_DisIN_BIT4		0x10	//
+#define	HMI_DisIN_BIT5		0x20	//
+#define	HMI_DisIN_BIT6		0x40	//
+#define	HMI_DisIN_BIT7		0x80	//
+
+//----变量声明----------------
+PEXT _MB_PRAR_T	    ModbusPara;
+PEXT unsigned char 	CoilBitPara[LENGTH_COIL_REG];
+PEXT unsigned char 	DiscreteBitPara[LENGTH_DiscreteREG];
+PEXT unsigned char 	HoldingREGPara[LENGTH_HoldingREG];
+PEXT unsigned char 	InputREGPara[LENGTH_InputREG];
+
+//----函数声明----------------
+PEXT unsigned short  ModbusCRC16( unsigned char  *puchMsg, unsigned short usDataLen) ;
+PEXT void ModbusInit(void);
+PEXT void ModbusSend(unsigned char length) ;
+PEXT void ModbusReceive(unsigned char res);
+PEXT void ModbusTimesProcess(void);
+PEXT void Modbus_ERROR(void) ;
+PEXT void MB_ReadHoldingRegisters(void) ;
+PEXT void MB_PresetSingleHoldingRegister(void);
+PEXT void MB_PresetMultipleHoldingRegisters(void);
+PEXT void ModbusProces(void);
+PEXT void ModbusRequest(unsigned char style, unsigned char sAdd,unsigned short val);
+
+#undef PEXT
+#endif
+
+
