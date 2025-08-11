@@ -22,16 +22,16 @@ bool GettCliffSignal(void)
     {// 齿片
         if(optStaLst==false)
         {
-            prInfo(syspara.typeInfo, "\r\n gap %d", Valve.nowGapCnt);
-            if(Valve.nowGapCnt>(sig.pulseGap[0]-sig.pulseGap[0]/3) && Valve.nowGapCnt<(sig.pulseGap[1]*2))
+            prInfo(syspara.typeInfo, "\r\n gap %d", Valve.nowGap);
+            if(Valve.nowGap>(sig.pulseGap[0]-sig.pulseGap[0]/3) && Valve.nowGap<(sig.pulseGap[1]*2))
             {
 //                prInfo(syspara.typeInfo, " %d", Valve.nowGapCnt);
-                Valve.nowGapCnt = 0;
+                Valve.nowGap = 0;
                 bCliff = true;
             }
             else
             {
-                prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowGapCnt, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
+                prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowGap, (sig.pulseGap[0]-sig.pulseGap[0]/3), (sig.pulseGap[1]*2));
             }
         }
     }
@@ -39,11 +39,11 @@ bool GettCliffSignal(void)
     {
         if(optStaLst==true)
         {
-            prInfo(syspara.typeInfo, "\r\n block %d", Valve.nowBlockCnt);
-            if(Valve.nowBlockCnt>(sig.pulseBlock[1]-sig.pulseBlock[1]/2) && Valve.nowBlockCnt<(sig.pulseBlock[0]*2))
+            prInfo(syspara.typeInfo, "\r\n block %d", Valve.nowBlock);
+            if(Valve.nowBlock>(sig.pulseBlock[1]-sig.pulseBlock[1]/2) && Valve.nowBlock<(sig.pulseBlock[0]*2))
             {
 //                prInfo(syspara.typeInfo, " %d", Valve.nowBlockCnt);
-                Valve.nowBlockCnt = 0;
+                Valve.nowBlock = 0;
                 bCliff = true;
             }
             else 
@@ -51,7 +51,7 @@ bool GettCliffSignal(void)
                 if(Valve.cntSignal)
                 {
                     Valve.status = OPT_ERR;
-                    prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowBlockCnt, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
+                    prInfo(syspara.typeInfo, " err %d %d %d", Valve.nowBlock, (sig.pulseBlock[1]-sig.pulseBlock[1]/3), (sig.pulseBlock[0]*2));
                 }
                 else
                 {// 第一个由于是在半齿开始，脉冲值会小，此值不做报错
@@ -230,6 +230,7 @@ void SignalScan(void)
             }
             break;
         case 1:
+            prInfo(syspara.typeInfo, "\r\n 计算并存储特征值");
             I2CPageRead_Nbytes(ADDR_SYMBOL, LEN_SYMBOL, rwBuff);
             // 重新排序，B0为常规齿，B1为小齿，B2为常规齿误差值，B3为小齿误差值，G0为常规口，G1为大口，G2为常规口误差，G3为大口误差
             sig.pulseBlock[0] = rwBuff[0];
@@ -262,6 +263,7 @@ void SignalScan(void)
             sig.stpScan = 2;
             break;
         case 2:
+            prInfo(syspara.typeInfo, "\r\n 扫描完成启动复位");
             VALVE_ENA = ON;
             Valve.status = VALVE_INITING;
             syspara.pwrOn = true;

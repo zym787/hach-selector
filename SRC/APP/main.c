@@ -214,81 +214,58 @@ void GPIOInit(void)
 }
 
 
-/*
-    PA15管脚外部中断函数
-*/
-void EXTI15_10_IRQHandler(void)
+void errProcRun(void)
 {
     if(sig.bRdPulse==false)
     {
-        if(!Valve.bNewInit)
-        {
-            syspara.bEXTI = true;
-        }
-    }
-    EXTI->PR |= 1<<15;
-}
-
-
-
-/*
-    外部中断初始化
-*/
-void EXTI_Init(void)
-{
-    // 外部中断脚输入输出定义
-    GPIOA->CRH &= (GPIO_Crh_P15);
-	GPIOA->CRH |= (GPIO_Mode_IN_PU_PD_P15);
-    GPIOA->ODR |= (GPIO_Pin_15);
-	Ex_NVIC_Config(GPIO_A, 15, RTIR);             // PA15触发类型上升沿
-	Ex_NVIC_Config(GPIO_A, 15, FTIR);             // PA15触发类型下降沿
-    MY_NVIC_Init(2,0,EXTI15_10_IRQChannel,0);     // 组2，4组抢占级4组优先级，最高抢占最高优先
-}
-
-
-void errProcRun(void)
-{
-    if(!(Valve.status&VALVE_INITING))
-    {// 复位时不做重新找位动作
-        if(++Valve.retryTms<=RETRY_TIMES)
-        {
-            Valve.status = VALVE_INITING;
-            Valve.bNewInit = 1;
-            syspara.pwrOn = true;
-            syspara.reShift = true;
-            Valve.initStep = 0;
-            syspara.protectTimeOut = 0;
-            Valve.cntSignal = 0;
-            prInfo(syspara.typeInfo, "\r\n reShift %d %d", Valve.portDes, Valve.retryTms);
+        if(!(Valve.status&VALVE_INITING))
+        {// 复位时不做重新找位动作
+            if(++Valve.retryTms<=RETRY_TIMES)
+            {
+                Valve.status = VALVE_INITING;
+//                Valve.bNewInit = 1;
+                syspara.pwrOn = true;
+                syspara.reShift = true;
+                Valve.initStep = 0;
+                syspara.protectTimeOut = 0;
+                Valve.cntSignal = 0;
+                prInfo(syspara.typeInfo, "\r\n reShift %d %d", Valve.portDes, Valve.retryTms);
+            }
+            else
+            {
+                errActionImme();
+                prInfo(syspara.typeInfo, "\r\n reShift times out");
+            }
         }
         else
         {
-            Valve.portDes = 0;
-            Valve.ErrBlinkTime = RETRY_TIME_OUT;
-            Valve.status = VALVE_ERR;
-            VALVE_ENA = DISABLE;
-            prInfo(syspara.typeInfo, "\r\n reShift times out");
+            errActionImme();
+            prInfo(syspara.typeInfo, "\r\n initing err");
         }
-    }
-    else
-    {
-        Valve.portDes = 0;
-        Valve.ErrBlinkTime = RETRY_TIME_OUT;
-        Valve.status = VALVE_ERR;
-        VALVE_ENA = DISABLE;
-        prInfo(syspara.typeInfo, "\r\n initing err");
     }
 }
 
 
+// 出错响应立即停机
+void errActionImme(void)
+{
+    Valve.portDes = 0;
+    Valve.ErrBlinkTime = RETRY_TIME_OUT;
+    Valve.status = VALVE_ERR;
+    VALVE_ENA = DISABLE;
+}
+
+
+#define SINGLE_RUN_TIMEOUT          3           // 转一圈差不多3秒，3秒内必须要找到位置
+#define single_INITING_TIMOUT       6           // 转一圈差不多3秒，复位单次是两圈
 void every50MilliSecDoing(void)
 {
     if(timerPara.everySec>50)
     {
         timerPara.everySec = 0;
-
-        if((Valve.status==VALVE_RUNNING&&syspara.protectTimeOut>5*SEC)
-            ||(Valve.status&VALVE_INITING&&syspara.protectTimeOut>10*SEC))
+        // 超时报错
+        if((Valve.status==VALVE_RUNNING&&syspara.protectTimeOut>SINGLE_RUN_TIMEOUT*SEC)
+            ||(Valve.status&VALVE_INITING&&syspara.protectTimeOut>single_INITING_TIMOUT*SEC))
         {// 单通道间做5秒的超时处理，避免长时间堵转烧坏电路
             if(!(Valve.status&VALVE_ERR))
             {
@@ -335,6 +312,20 @@ void every50MilliSecDoing(void)
 
 
 /*
+    清除标志
+*/
+void FlagClear(void)
+{
+    if(!MotionStatus[AXSV] && syspara.dbgStop==true)
+    {
+        syspara.dbgStop = false;
+        prInfo(syspara.typeInfo, "\r\n get point");
+    }
+
+}
+
+
+/*
 
 */
 int main(void)
@@ -350,15 +341,23 @@ int main(void)
     TIM4_Init(65535,35);            //X轴脉冲定时器
     GPIOInit();
     EXTI_Init();
-    MYDMA_TX_Cfg(DMA1_Channel2, (unsigned int)&USART3->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
-    MYDMA_TX_Cfg(DMA1_Channel7, (unsigned int)&USART2->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
+
     delay_ms(100);
     BootInterface();
     ParameterInit();
     if(syspara.typeProtocal==MY_MODBUS)
         ModbusInit();
     else
+    {
         CommInit();
+        MYDMA_TX_Cfg(DMA1_Channel2, (unsigned int)&USART3->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
+        MYDMA_TX_Cfg(DMA1_Channel7, (unsigned int)&USART2->DR, (unsigned int)protext.replyBuf, REPLY_LENS);
+        MYDMA_RX_Cfg(DMA1_Channel3, (unsigned int)&USART3->DR, (unsigned int)protext.usartBuf, RECEIVE_LENS);
+        MYDMA_RX_Cfg(DMA1_Channel6, (unsigned int)&USART2->DR, (unsigned int)protext.usartBuf, RECEIVE_LENS);
+        RX_EN();
+        MYDMA_Receive_Enable(USART3, DMA1_Channel3, RECEIVE_LENS);
+        MYDMA_Receive_Enable(USART2, DMA1_Channel6, RECEIVE_LENS);
+    }
 
 	while(1)
 	{
@@ -366,12 +365,13 @@ int main(void)
             ModbusProces();
         else
             UsartProcess();
-        InitValve();
         ProcessInterrupt();
         if(Valve.status!=VALVE_ERR)
         {
             ProcessValve();
         }
+        FlagClear();
+        InitValve();
         every50MilliSecDoing();
         SignalScan();
         TestBurn();
@@ -382,11 +382,6 @@ int main(void)
 
 void DebugOut(void)
 {
-    if(!MotionStatus[AXSV] && syspara.dbgStop==true)
-    {
-        syspara.dbgStop = false;
-        prInfo(syspara.typeInfo, "\r\n get point");
-    }
     if(timerPara.timeDbg>SEC)
     {
         timerPara.timeDbg = 0;
@@ -396,8 +391,11 @@ void DebugOut(void)
             Valve.bGetOrg = 0;
             prInfo(syspara.typeInfo, "\r\n get/pass org %d", position[AXSV]);
         }
-        prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d", 
-        Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT);
+         prDbg(syspara.typeInfo, "\r\n >>status:0x%02x,port:0x%02x,dest:0x%02x,opt:%d",
+                Valve.status, Valve.portCur, Valve.portDes, VALVE_OPT);
+//        printd("\r\n");
+//        for(uint8 i=0; i<8; i++)
+//            printd(" %02x", *(protext.usartBuf+i));
 
     }
 }

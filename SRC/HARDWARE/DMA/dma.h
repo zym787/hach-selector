@@ -18,8 +18,8 @@ PEXT uint8 RcvBuf[BUFF_LEN];
 
 PEXT void MYDMA_TX_Cfg(DMA_Channel_TypeDef*DMA_CHx,unsigned int cpar,unsigned int cmar,unsigned short cndtr);
 PEXT void MYDMA_RX_Cfg(DMA_Channel_TypeDef*DMA_CHx,unsigned int cpar,unsigned int cmar,unsigned short cndtr);
-PEXT void MYDMA_Enable(USART_TypeDef *UART_CHx, DMA_Channel_TypeDef *DMA_CHx, unsigned short buffLen);
-PEXT void DMA1_Channel7_IRQHandler(void);
+PEXT void MYDMA_Transmit_Enable(USART_TypeDef *UART_CHx, DMA_Channel_TypeDef *DMA_CHx, unsigned short buffLen);
+PEXT void MYDMA_Receive_Enable(USART_TypeDef *UART_CHx, DMA_Channel_TypeDef *DMA_CHx, unsigned short buffLen);
 PEXT void DMA_Usart_Int(void);
 
 

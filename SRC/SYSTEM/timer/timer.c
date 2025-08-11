@@ -34,6 +34,8 @@ void TIM2_IRQHandler(void)
         else
             protext.time = 0;;
         StrProc();
+        if(MotionStatus[AXSV])
+            ++syspara.sigRunTime;
     }
 }
 
@@ -87,7 +89,6 @@ void TIM4_IRQHandler(void)
 	{
         TIM4->SR &= ~0x0001 ;//清除中断标志位
         AxisXTimer();
-//        ProcessValveTimer();
 	}
 }
 

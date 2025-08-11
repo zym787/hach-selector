@@ -112,10 +112,13 @@ void Usart2_Init(u32 pclk2,u32 bound)
  	USART2->BRR=mantissa;            // 波特率设置
 	USART2->CR1 |= 0x200C;           //默认:一个起始位，8个数据位,1位停止,无校验位.
     #if EN_UART2_RX 		         //如果使能了接收
-	//使能接收中断
-	USART2->CR1 |= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
-	USART2->CR1 |= 1<<5;              //接收缓冲区非空中断使能
-    MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    if(syspara.typeProtocal==MY_MODBUS)
+    {
+    	//使能接收中断
+    	USART2->CR1 |= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
+    	USART2->CR1 |= 1<<5;              //接收缓冲区非空中断使能
+        MY_NVIC_Init(1,3,USART2_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    }
     #endif
 }
 
@@ -145,8 +148,8 @@ void USART2_IRQHandler(void)
 		res=USART2->DR;
         if(syspara.typeProtocal==MY_MODBUS)
             ModbusReceive(res);
-        else
-            RxUsart(res);
+//        else
+//            RxUsart(res);
     }
 }
 
@@ -180,10 +183,13 @@ void Usart3_Init(u32 pclk2,u32 bound)
  	USART3->BRR=mantissa;            // 波特率设置
 	USART3->CR1 |= 0x200C;           //默认:一个起始位，8个数据位,1位停止,无校验位.
     #if EN_UART3_RX 		        //如果使能了接收
-	//使能接收中断
-	USART3->CR1|= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
-	USART3->CR1|= 1<<5;              //接收缓冲区非空中断使能
-	MY_NVIC_Init(0,3,USART3_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    if(syspara.typeProtocal==MY_MODBUS)
+    {
+    	//使能接收中断
+    	USART3->CR1|= 1<<8;              //PE中断使能,接收缓冲区非空中断使能
+    	USART3->CR1|= 1<<5;              //接收缓冲区非空中断使能
+    	MY_NVIC_Init(0,3,USART3_IRQn,2); //组2(4组抢占(0,1,2,3)，4组优先(0,1,2,3))，最低抢占级，最低优先级
+    }
     #endif
 }
 
@@ -214,8 +220,8 @@ void USART3_IRQHandler(void)
 		res = USART3->DR;
         if(syspara.typeProtocal==MY_MODBUS)
             ModbusReceive(res);
-        else
-            RxUsart(res);
+//        else
+//            RxUsart(res);
 	}
 }
 

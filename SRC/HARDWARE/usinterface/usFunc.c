@@ -324,6 +324,7 @@ void TermPos(char rw)
             Valve.portDes = getInt[0];
             Valve.dir = getInt[1];
             syspara.protectTimeOut = 0;
+            syspara.sigRunTime = 0;
         }
     }
 }
@@ -718,7 +719,7 @@ void TermRST(char rw)
     Valve.initStep = 0;
     Valve.portDes = 0;
     Valve.stpCnt = 0;
-    Valve.bErr = 0;
+    Valve.bErr = NONE_ERR;
     Valve.bNewInit = 1;
     syspara.protectTimeOut = 0;
     VALVE_ENA = ENABLE;

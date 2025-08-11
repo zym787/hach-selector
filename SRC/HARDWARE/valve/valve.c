@@ -6,25 +6,6 @@
     达到信号个数后按此偏移量进行减速，并重定义为当前位的坐标
     使位置的坐标相对稳定，如遇信号量不准，即报错，正反向的补偿不同
 */
-//#define CNT 13
-//const sint32 posCoord[CNT]=
-//{
-
-//    0,
-//    -1067 ,
-//    -2133 ,
-//    -3200 ,
-//    -4267 ,
-//    -5333 ,
-//    -6400 ,
-//    -7467 ,
-//    -8533 ,
-//    -9600 ,
-//    -10667 ,
-//    -11733 ,
-//    -12800 ,
-//};
-
 void ConfigValve(void)
 {
     RCC->APB2ENR |= (RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC);
@@ -335,8 +316,6 @@ void ProcessValve(void)
                         }
                         if(Valve.bNewInit)
                             Valve.bNewInit = 0;
-                        Valve.OptBlock = 0;
-                        Valve.OptGap = 0;
         				Valve.status &= ~VALVE_RUN_END; 	// 清除运行结束标志
         				Valve.status |= VALVE_RUNNING; 	    // 置位运行标志
                         Valve.statusLast = VALVE_RUNNING;
@@ -368,7 +347,7 @@ void ProcessValve(void)
                             Valve.retryTms = 0;
                             Valve.status = VALVE_RUN_END;
                             Valve.cntSignal = 0;
-                            Valve.bErr = 0;
+                            Valve.bErr = NONE_ERR;
                             getPrePort();
                         }
                         else
@@ -382,9 +361,8 @@ void ProcessValve(void)
                             {
                                 prInfo(syspara.typeInfo, "\r\n Block Dead");
                             }
-//                            Valve.status = VALVE_ERR;
                             Valve.cntSignal = 0;
-                            Valve.bErr = 1;
+                            Valve.bErr = SIGNAL_CNT_ERR;
                         }
                     }
                     else
@@ -411,21 +389,45 @@ void ValveLimitDetect(void)
     syspara.bInterrupt = true;
 }
 
-/*
 
+
+/*
+    PA15管脚外部中断函数
+    
+    信号过滤与报错判断，有信号跳变的完整信号
+    过滤宽度比小齿宽度小的信号，过滤信号比常规齿片大的信号，过滤信号比常规缺口小的信号，过滤信号比大缺口大的信号
+
+    信号过滤与报错判断，无信号跳变的持续信号
+    判断处理段放在中断里面
 */
-void ProcessInterrupt(void)
+void EXTI15_10_IRQHandler(void)
 {
-    if(syspara.bEXTI==true)
-    {
-        syspara.bEXTI = false;
-        ++Valve.cntSignal;
-    }
     if(sig.bRdPulse==false)
     {
+        // 信号合格判断，不合格宽度的信号值会被丢弃
+        if(!Valve.bNewInit)
+        {
+            if(!(Valve.status&VALVE_INITING) && syspara.bSkipFirstSig==true && Valve.nowBlock && Valve.nowGap)
+            {
+                // 信号过滤与报错判断，有信号跳变的完整信号
+                // 过滤宽度比小齿宽度小的信号，过滤信号比常规齿片大的信号，过滤信号比常规缺口小的信号，过滤信号比大缺口大的信号
+                if(Valve.nowBlock<(sig.pulseBlock[1]-sig.pulseBlock[3])>>1 || Valve.nowBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])
+                    || Valve.nowGap<(sig.pulseGap[0]-sig.pulseGap[2])>>1 || Valve.nowGap>(sig.pulseGap[1]+sig.pulseGap[3]))
+                {// 信号出错
+                    prInfo(syspara.typeInfo, "\r\n err width %d %d", Valve.nowBlock, Valve.nowGap);
+                    VALVE_ENA = DISABLE;
+                    Valve.bErr = SIGNAL_WIDTH_ERR;
+                    errProcRun();
+                    return;
+                }
+            }
+            ++Valve.cntSignal;
+        }
+
+        // 信号到位后的减速处理，接近孔位
         if(syspara.dbgStop==false && !Valve.bNewInit)
         {
-            if(Valve.cntSignal>=Valve.limitSignal)
+            if(Valve.cntSignal==Valve.limitSignal)
             {// 修正坐标
                 if(srd[AXSV].dir==CW)
                 {
@@ -452,33 +454,68 @@ void ProcessInterrupt(void)
             }
         }
     }
+    // 清除首个脉冲宽度检查标志
+    EXTI->PR |= 1<<15;
+}
 
+
+
+/*
+    外部中断初始化
+*/
+void EXTI_Init(void)
+{
+    // 外部中断脚输入输出定义
+    GPIOA->CRH &= (GPIO_Crh_P15);
+	GPIOA->CRH |= (GPIO_Mode_IN_PU_PD_P15);
+    GPIOA->ODR |= (GPIO_Pin_15);
+	Ex_NVIC_Config(GPIO_A, 15, RTIR);             // PA15触发类型上升沿
+	Ex_NVIC_Config(GPIO_A, 15, FTIR);             // PA15触发类型下降沿
+    MY_NVIC_Init(2,0,EXTI15_10_IRQChannel,0);     // 组2，4组抢占级4组优先级，最高抢占最高优先
+}
+
+
+/*
+
+*/
+void ProcessInterrupt(void)
+{
+    static uint32 OptGap=0, OptBlock=0;
     if(syspara.bInterrupt==true)
     {
         syspara.bInterrupt = false;
         if(!VALVE_OPT)
         {// 缺口
-            ++Valve.OptGap;
-            if(Valve.OptBlock)
+            ++OptGap;
+            // 避免来回走动时首个信号宽有可能达到双倍宽度
+            if(sig.bRdPulse==false)
+            {
+                if(OptGap>(sig.pulseGap[1]+sig.pulseGap[3])<<1 && !Valve.bErr)
+                {// 无信号跳变的信号异常，堵转报错监测，堵转超出误差最大值两倍(使用左移乘法)报错，立即停机
+                    Valve.bErr = SIGNAL_CONT_GAP_ERR;
+                    errProcRun();
+                    prInfo(syspara.typeInfo, "\r\n Continue Gap Err %d", OptGap);
+                }
+            }
+
+            if(OptBlock)
             {// 此时处理挡片
                 if(syspara.pwrOn==false)
                 {
-                    if(sig.bRdPulse==false && Valve.OptBlock<sig.pulseBlock[0]/10) // 过滤干扰
-                        return;
                     if(sig.bRdPulse==true)
                     {
-                        prInfo(syspara.typeInfo, "\r\nB%d",Valve.OptBlock);
-                        sig.pulseBlock[sig.blockNum++] = Valve.OptBlock;
+                        prInfo(syspara.typeInfo, "\r\nB%d", OptBlock);
+                        sig.pulseBlock[sig.blockNum++] = OptBlock;
                         ++sig.count;
                     }
                     else
                     {
-                        if(Valve.OptBlock>(sig.pulseBlock[0]-sig.pulseBlock[2]) && Valve.OptBlock<(sig.pulseBlock[0]+sig.pulseBlock[2]))
+                        if(OptBlock>(sig.pulseBlock[0]-sig.pulseBlock[2]) &&  OptBlock<(sig.pulseBlock[0]+sig.pulseBlock[2]))
                         {
                             if(Valve.passByOne==1&&Valve.initStep==3)
                                 Valve.initStep = 0;
                         }
-                        else if(Valve.OptBlock>(sig.pulseBlock[1]-sig.pulseBlock[3]) && Valve.OptBlock<(sig.pulseBlock[1]+sig.pulseBlock[3]))
+                        else if(OptBlock>(sig.pulseBlock[1]-sig.pulseBlock[3]) && OptBlock<(sig.pulseBlock[1]+sig.pulseBlock[3]))
                         {
                             if(!Valve.initStep)
                             {// 1步，首先碰到小的挡片
@@ -486,46 +523,42 @@ void ProcessInterrupt(void)
                                 //prInfo(syspara.typeInfo, "\r litB");
                             }
                         }
-                        #ifdef SIG_DET
-                        else if(!(Valve.status&VALVE_INITING) && syspara.bSkipFirstSig==true)
-                        {
-                            if(Valve.OptBlock<(sig.pulseBlock[1]-sig.pulseBlock[3]) || Valve.OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])
-                            || (Valve.OptBlock>(sig.pulseBlock[1]+sig.pulseBlock[3]) && Valve.OptBlock<=(sig.pulseBlock[0]-sig.pulseBlock[2])))
-                            {// 信号出错
-                                prInfo(syspara.typeInfo, "\r\n err block %d", Valve.OptBlock);
-                                VALVE_ENA = DISABLE;
-                                Valve.bErr = 1;
-                                errProcRun();
-                            }
-                        }
-                        #endif
                     }
                 }
                 else
                     syspara.pwrOn = false;
                 if(syspara.bSkipFirstSig==false)
                     syspara.bSkipFirstSig = true;
-                Valve.nowBlockCnt = Valve.OptBlock;
-                Valve.OptBlock = 0;
+                else
+                    Valve.nowBlock = OptBlock;
+                OptBlock = 0;
             }
         }
         else
         {// 挡片
-            ++Valve.OptBlock;
-            if(Valve.OptGap)
+            ++OptBlock;
+            // 避免来回走动时首个信号宽有可能达到双倍宽度
+            if(sig.bRdPulse==false)
+            {
+                if(OptBlock>(sig.pulseBlock[0]+sig.pulseBlock[2])<<1 && !Valve.bErr)
+                {// 无信号跳变的信号异常，堵转报错监测，堵转超出误差最大值两倍(使用左移乘法)报错，立即停机
+                    Valve.bErr = SIGNAL_CONT_BLOCK_ERR;
+                    errProcRun();
+                    prInfo(syspara.typeInfo, "\r\n Continue Block Err %d", OptBlock);
+                }
+            }
+            if(OptGap)
             {// 此处处理缺口
                 if(syspara.pwrOn==false)
                 {
-                    if(sig.bRdPulse==false && Valve.OptGap<sig.pulseGap[0]/10) // 过滤干扰
-                        return;
                     if(sig.bRdPulse==true)
                     {
-                        prInfo(syspara.typeInfo, "\r\nG%d",Valve.OptGap);
-                        sig.pulseGap[sig.gapNum++] = Valve.OptGap;
+                        prInfo(syspara.typeInfo, "\r\nG%d", OptGap);
+                        sig.pulseGap[sig.gapNum++] = OptGap;
                     }
                     else
                     {
-                        if(Valve.OptGap>(sig.pulseGap[1]-sig.pulseGap[3]) && Valve.OptGap<=(sig.pulseGap[1]+sig.pulseGap[3]))
+                        if(OptGap>(sig.pulseGap[1]-sig.pulseGap[3]) && OptGap<=(sig.pulseGap[1]+sig.pulseGap[3]))
                         {
                             // 每圈进行数据清除，保证长期转动下来不会有误差累积
                             Valve.stpCnt = 0;
@@ -535,25 +568,12 @@ void ProcessInterrupt(void)
                                 //prInfo(syspara.typeInfo, "\r lrg");
                             }
                         }
-                        #ifdef SIG_DET
-                        else if(!(Valve.status&VALVE_INITING) && syspara.bSkipFirstSig==true)
-                        {
-                            if(Valve.OptGap<(sig.pulseGap[0]-sig.pulseGap[2]) || Valve.OptGap>(sig.pulseGap[1]+sig.pulseGap[3])
-                                || (Valve.OptGap>(sig.pulseGap[0]+sig.pulseGap[2]) && Valve.OptGap<=(sig.pulseGap[1]-sig.pulseGap[3])))
-                            {// 信号出错
-                                prInfo(syspara.typeInfo, "\r\n err gap %d", Valve.OptGap);
-                                VALVE_ENA = DISABLE;
-                                Valve.bErr = 1;
-                                errProcRun();
-                            }
-                        }
-                        #endif
                     }
                 }
                 else
                     syspara.pwrOn = false;
-                Valve.nowGapCnt = Valve.OptGap;
-                Valve.OptGap = 0;
+                Valve.nowGap = OptGap;
+                OptGap = 0;
             }
         }
         if(sig.bRdPulse==false)
@@ -587,21 +607,6 @@ void ProcessInterrupt(void)
                                     Valve.portCur = valveFix.fix.portCnt;
                                     Valve.cntSignal = 0;
                                 }
-                                else if(Valve.cntSignal)
-                                {
-                                    prInfo(syspara.typeInfo, "\r\n err-1 signal %d %d", Valve.cntSignal, Valve.limitSignal);
-                                    Valve.status = VALVE_ERR;
-                                    Valve.cntSignal = 0;
-                                    Valve.bErr = 1;
-                                    errProcRun();
-                                }
-                                else if(!Valve.cntSignal)
-                                {// 堵死不动
-                                    prInfo(syspara.typeInfo, "\r\n err-3 BLOCK DEAD");
-                                    Valve.status = VALVE_ERR;
-                                    Valve.cntSignal = 0;
-                                    Valve.bErr = 1;
-                                }
                             }
                         }
                         else
@@ -619,24 +624,13 @@ void ProcessInterrupt(void)
                                     Valve.portCur = valveFix.fix.portCnt;
                                     Valve.cntSignal = 0;
                                 }
-                                else if(Valve.cntSignal)
-                                {
-                                    prInfo(syspara.typeInfo, "\r\n err-2 signal %d %d", Valve.cntSignal, Valve.limitSignal);
-                                    Valve.status = VALVE_ERR;
-                                    Valve.cntSignal = 0;
-                                    Valve.bErr = 1;
-                                    errProcRun();
-                                }
-                                else if(!Valve.cntSignal)
-                                {// 堵死不动
-                                    prInfo(syspara.typeInfo, "\r\n err-4 BLOCK DEAD");
-                                    Valve.status = VALVE_ERR;
-                                    Valve.cntSignal = 0;
-                                    Valve.bErr = 1;
-                                }
                             }
                         }
-
+                        // 如果目标位是12号位，即已到目标，清除错误标志
+                        if(Valve.portDes==valveFix.fix.portCnt)
+                        {
+                            Valve.bErr = NONE_ERR;
+                        }
                         Valve.passByOne = 0;
                         Valve.status &= ~VALVE_RUNNING;
                         if(!(Valve.status&VALVE_ERR))
@@ -646,7 +640,6 @@ void ProcessInterrupt(void)
                         if(Valve.bErr)
                             syspara.shiftOnece = true;
                         getPrePort();
-                        prInfo(syspara.typeInfo, "\r\n inited");
                     }
                 }
             }

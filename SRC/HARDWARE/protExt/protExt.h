@@ -54,9 +54,9 @@ typedef struct
     uint8   sendCnt;
     uint8   send232Cnt;
     uint8   send485Cnt;    
-    uint8   usartBuf[128];
-    uint8   replyBuf[128];
-    uint8   reply485Buf[128];
+    uint8   usartBuf[RECEIVE_LENS];
+    uint8   replyBuf[REPLY_LENS];
+    uint8   reply485Buf[REPLY_LENS];
 }_PROTEXT_T;
 PEXT _PROTEXT_T protext;
 
@@ -70,10 +70,12 @@ typedef struct
 PEXT _ERR_RECORD_T errRecord;
 #endif
 
-PEXT void RxUsart(uint8 res);
+//PEXT void RxUsart(uint8 res);
+PEXT void RxUsart(void);
 PEXT void UsartProcess(void);
 PEXT void CommInit(void);
 PEXT void InfoErrPrint(void);
+PEXT void ERR_Reset(void);
 
 
 #undef PEXT

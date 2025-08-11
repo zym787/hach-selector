@@ -7,8 +7,8 @@
 #define PEXT extern
 #endif
 
-#define SOFT_VER                106
-#define SOFT_VS                 "V1.0.6r6"
+#define SOFT_VER                107
+#define SOFT_VS                 "V1.0.7r6"
 //#define SOFT_VS                 "V2.0.3r3"
 
 //------------------------------------------------------------------------------------------------------------
@@ -61,11 +61,6 @@
 #define NORMAL_BLINK            2500       //正常运行的闪烁间隔
 #define RETRY_TIME_OUT          500        //异常运行的闪烁间隔
 
-
-#define	RX_EN()		(PBout(1)=0)
-#define	TX_EN()		(PBout(1)=1)
-
-
 enum PROTOCAL
 {
     MY_MODBUS,
@@ -84,6 +79,7 @@ typedef struct
 {
     _PRINT_OUT_T    typeInfo;
     _PRINT_OUT_T    comInfo;
+    uint32  protectTimeOut;
     uint8   typeProtocal;
     uint8   bdrate;
     bool    bRdPulse;
@@ -92,10 +88,8 @@ typedef struct
     bool    reShift;        // 出错后重新走位
     bool    dbgStop;     // 首次运行
     bool    bInterrupt;
-    uint32  protectTimeOut;
-    bool    bEXTI;
     bool    bSkipFirstSig;      // 跳过首个信号值
-    uint8    byteSend;
+    uint16  sigRunTime;         // 单次电机运行时间
 }_SYS_T;
 PEXT _SYS_T syspara;
 
@@ -106,6 +100,7 @@ PEXT int main(void);
 PEXT void DebugOut(void);
 PEXT void UsrLimit(void);
 PEXT void errProcRun(void);
+PEXT void errActionImme(void);
 
 
 

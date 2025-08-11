@@ -95,10 +95,10 @@ typedef struct
     unsigned char fixOrg;          	// 原点补偿
     unsigned char spd;              // 再次复位转动
 
-    unsigned int OptGap;            //光耦高电平脉冲步数
-    unsigned int OptBlock;          //光耦低电平脉冲步数
-    unsigned int nowGapCnt;         //光耦低电平脉冲步数
-    unsigned int nowBlockCnt;       //光耦低电平脉冲步数
+//    unsigned int OptGap;            //光耦高电平脉冲步数
+//    unsigned int OptBlock;          //光耦低电平脉冲步数
+    unsigned int nowGap;         //光耦低电平脉冲步数
+    unsigned int nowBlock;       //光耦低电平脉冲步数
     unsigned int stpCnt;            //初始化后开始补偿的步数
 
     unsigned int BaudRate;          //运行的波特率值
@@ -118,6 +118,16 @@ typedef struct
 	float	stepP01dgr;
 }RDC_T;
 PEXT RDC_T rdc;
+
+// 信号出错
+enum
+{
+    NONE_ERR,               // 没有错误
+    SIGNAL_CNT_ERR,         // 光耦信号个数错误
+    SIGNAL_WIDTH_ERR,       // 挡片或缺口宽度错误
+    SIGNAL_CONT_GAP_ERR,    // 缺口持续计数错误
+    SIGNAL_CONT_BLOCK_ERR,  // 挡片持续计数错误      
+};
 
 #define FIX_VAL_LENGHT      14
 typedef union
@@ -152,6 +162,7 @@ PEXT void ValveProcess(void);
 PEXT void ProcessValve(void);
 PEXT void ValveLimitDetect(void);
 PEXT void ProcessInterrupt(void);
+PEXT void EXTI_Init(void);
 PEXT void TestBurn(void);
 
 #undef PEXT

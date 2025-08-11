@@ -67,28 +67,77 @@ void RCV_Buf(unsigned char buf)
 
 /*
 */
-void RxUsart(uint8 res)
-{
-    if(protext.time>100)
-    {
-        protext.time = 0;
-        protext.stepCnt = 0;
-        ERR_Reset();
-    }
+//void RxUsart(uint8 res)
+//{
+//    if(protext.time>100)
+//    {
+//        protext.time = 0;
+//        protext.stepCnt = 0;
+//        ERR_Reset();
+//    }
 
+//	switch(protext.stepCnt)
+//	{
+//		case PROTOCOL_HEAD:
+//			if(res == HEAD_BYTE)
+//			{
+//				RCV_Buf(res);
+//				protext.stepCnt = PROTOCOL_ADDR;
+//			}
+//			break;
+//		case PROTOCOL_ADDR:
+//			if(res == ModbusPara.mAddrs)
+//			{
+//				RCV_Buf(res);
+//				protext.stepCnt = PROTOCOL_COMMAND;
+//			}
+//            else
+//            {
+//			    ERR_Reset();
+//            }
+//			break;
+//		case PROTOCOL_COMMAND:
+//            RCV_Buf(res);
+//            protext.dataLen = LEN_DATA;
+//            protext.stepCnt = PROTOCOL_DATA;
+//            break;
+//		case PROTOCOL_DATA:
+//			RCV_Buf(res);
+//			if(--protext.dataLen>0)
+//			{
+//				protext.stepCnt = PROTOCOL_DATA;
+//			}
+//			else
+//			{
+//				protext.stepCnt = PROTOCOL_CS;
+//			}
+//			break;
+//		case PROTOCOL_CS:
+//			RCV_Buf(res);
+//			protext.stepCnt = PROTOCOL_OK;
+//			break;
+//		default:
+//			break;
+//	}
+//}
+
+void RxUsart(void)
+{
 	switch(protext.stepCnt)
 	{
 		case PROTOCOL_HEAD:
-			if(res == HEAD_BYTE)
+			if(*(protext.usartBuf+0) == HEAD_BYTE)
 			{
-				RCV_Buf(res);
 				protext.stepCnt = PROTOCOL_ADDR;
 			}
+            else
+            {
+			    ERR_Reset();
+            }
 			break;
 		case PROTOCOL_ADDR:
-			if(res == ModbusPara.mAddrs)
+			if(*(protext.usartBuf+1) == ModbusPara.mAddrs)
 			{
-				RCV_Buf(res);
 				protext.stepCnt = PROTOCOL_COMMAND;
 			}
             else
@@ -97,23 +146,6 @@ void RxUsart(uint8 res)
             }
 			break;
 		case PROTOCOL_COMMAND:
-            RCV_Buf(res);
-            protext.dataLen = LEN_DATA;
-            protext.stepCnt = PROTOCOL_DATA;
-            break;
-		case PROTOCOL_DATA:
-			RCV_Buf(res);
-			if(--protext.dataLen>0)
-			{
-				protext.stepCnt = PROTOCOL_DATA;
-			}
-			else
-			{
-				protext.stepCnt = PROTOCOL_CS;
-			}
-			break;
-		case PROTOCOL_CS:
-			RCV_Buf(res);
 			protext.stepCnt = PROTOCOL_OK;
 			break;
 		default:
@@ -143,37 +175,6 @@ uint8 CommCheckSum(uint32 lenth, uint8 *sendbuf)
     else
         return 0;
 }
-
-
-//    /*
-//    */
-//    void CommSend(uint32 length, uint8 *sendbuf)
-//    {
-//    	unsigned char cnt;
-
-//    	TX_EN();
-//    	if(length)
-//    	{
-//    		for(cnt=0; cnt < length; cnt++)
-//    		{
-//    			while((USART3->SR&0X40)==0);        // 等待发送结束
-//    			USART3->DR = *(sendbuf+cnt);
-//    		}
-//    	}
-//    	while((USART3->SR&0X40)==0);                // 等待发送结束
-//    	RX_EN();
-
-//    	if(length)
-//    	{
-//    		for(cnt=0; cnt < length; cnt++)
-//    		{
-//    			while((USART2->SR&0X40)==0);        // 等待发送结束
-//    			USART2->DR = *(sendbuf+cnt);
-//    		}
-//    	}
-//    	while((USART2->SR&0X40)==0);                // 等待发送结束
-//    }
-
 
 
 /*
@@ -248,9 +249,9 @@ void AskStaProcess(uint32 sta8)
             protext.replyBuf[4] = 0x00;
             if(Valve.bErr)
             {
-//                if(Valve.status==VALVE_RUN_END)
-//                    protext.replyBuf[5] = 0x00;
-//                else
+                if(Valve.status==VALVE_ERR)
+                    protext.replyBuf[5] = VALVE_ERR;
+                else
                     protext.replyBuf[5] = 0x08;
             }
             else
@@ -278,10 +279,9 @@ void AskStaProcess(uint32 sta8)
     {
         prInfo(syspara.comInfo, " %02x", protext.replyBuf[i]);
     }
-//    CommSend(sdLen, protext.replyBuf);
     TX_EN();
-    MYDMA_Enable(USART3, DMA1_Channel2, REPLY_LENS);
-    MYDMA_Enable(USART2, DMA1_Channel7, REPLY_LENS);
+    MYDMA_Transmit_Enable(USART3, DMA1_Channel2, REPLY_LENS);
+    MYDMA_Transmit_Enable(USART2, DMA1_Channel7, REPLY_LENS);
     
 }
 
@@ -313,6 +313,7 @@ void NormalAction(void)
     	    Valve.portDes = Itemp;
         else
     	    Valve.bErrRetn = 0x01;
+        syspara.sigRunTime = 0;
     }
 }
 
@@ -394,7 +395,7 @@ void RstAction(void)
     Valve.stpCnt = 0;
     Valve.bNewInit = 1;
     syspara.pwrOn = true;
-    Valve.bErr = 0;
+    Valve.bErr = NONE_ERR;
     syspara.protectTimeOut = 0;
     I2CPageRead_Nbytes(ADDR_PORT_CNT, LEN_PORT_CNT, &valveFix.fix.portCnt);
     (valveFix.fix.portCnt&&valveFix.fix.portCnt>32)?(valveFix.fix.portCnt=10):(valveFix.fix.portCnt);
