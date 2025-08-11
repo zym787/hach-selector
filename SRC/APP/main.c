@@ -188,6 +188,7 @@ void ParameterInit(void)
     }
     VALVE_ENA = ON;
     Valve.status = VALVE_INITING;
+    Valve.portCur = 0;
     Valve.ErrBlinkTime = NORMAL_BLINK;
     Valve.passByOne = 0;
     Valve.bNewInit = 1;
@@ -223,6 +224,7 @@ void errProcRun(void)
             if(Valve.retryTms<RETRY_TIMES-1)
             {
                 Valve.status = VALVE_INITING;
+                Valve.portCur = 0;
                 Valve.bNewInit = 1;
                 syspara.pwrOn = true;
                 syspara.reShift = true;
@@ -291,7 +293,7 @@ void every50MilliSecDoing(void)
         // 复位完后走到半通道或者1号位
         if(!Valve.bHalfDo)
         {
-            if(!MotionStatus[AXSV])
+            if(!MotionStatus[AXSV] && !(Valve.status&VALVE_ERR))
             {
                 if(!Valve.bErr && Valve.bNewInit)
                 {
@@ -325,7 +327,7 @@ void every50MilliSecDoing(void)
         }
         else if(Valve.bHalfDo==1)
         {// 半通道走完
-            if(!MotionStatus[AXSV])
+            if(!MotionStatus[AXSV]&&!(Valve.status&VALVE_ERR))
             {
                 Valve.bHalfDo = 2;
                 (Valve.bHalfSeal)?(Valve.portCur = 0xff):(Valve.portCur = 1);
@@ -403,7 +405,7 @@ int main(void)
 
 void DebugOut(void)
 {
-    if(timerPara.timeDbg>SEC)
+    if(timerPara.timeDbg>DMSEC/2)
     {
         timerPara.timeDbg = 0;
         LED_WORK = !LED_WORK;

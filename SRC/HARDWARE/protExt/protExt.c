@@ -187,7 +187,7 @@ void AskStaProcess(uint32 sta8)
             protext.replyBuf[4] = 0x00;
             if(Valve.bErr)
             {
-                if(Valve.status==VALVE_ERR)
+                if(Valve.status&VALVE_ERR)
                     protext.replyBuf[5] = VALVE_ERR;
                 else
                 {
@@ -334,6 +334,7 @@ void RstAction(void)
     Valve.retryTms = 0;
     Valve.status = VALVE_INITING;
     Valve.initStep = 0;
+    Valve.portCur = 0;
     Valve.portDes = 0;
     Valve.stpCnt = 0;
     Valve.bHalfDo = 0;

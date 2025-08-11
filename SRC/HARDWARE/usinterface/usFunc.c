@@ -716,6 +716,7 @@ void TermRST(char rw)
     syspara.pwrOn = true;
     Valve.status = VALVE_INITING;
     Valve.initStep = 0;
+    Valve.portCur = 0;
     Valve.portDes = 0;
     Valve.stpCnt = 0;
     Valve.bHalfDo = 0;

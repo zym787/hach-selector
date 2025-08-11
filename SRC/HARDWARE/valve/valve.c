@@ -596,8 +596,7 @@ void ProcessInterrupt(void)
                         position[AXSV] = Valve.fixOrg*rdc.stepP01dgr/2;
                         if(Valve.status&VALVE_INITING)
                         {
-                            Valve.status &= ~(VALVE_INITING|VALVE_RUNNING);
-//                            Valve.portCur = valveFix.fix.portCnt;
+                            Valve.status &= ~VALVE_INITING;
                             syspara.shiftOnece = false;
                         }
                         Valve.passByOne = 0;
